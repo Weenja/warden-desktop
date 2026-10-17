@@ -1,0 +1,83 @@
+/* Fake OS frames for the mockups only (desktop, menu bar, notch, taskbar, window chrome). Not part of the app UI. */
+
+.desk {
+  --bar-h: 30px; --notch-w: 164px;
+  position: relative; overflow: hidden; border-radius: 14px; height: 440px;
+  background: linear-gradient(160deg, #2B3A55 0%, #4B3B63 55%, #6A4A5C 100%);
+  font-family: -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  box-shadow: 0 0 0 1px var(--line), 0 20px 50px -30px var(--shadow);
+}
+[data-theme="light"] .desk { background: linear-gradient(160deg, #BFD8EE 0%, #E7D6EC 55%, #F6DCCB 100%); }
+.desk--short { height: 200px; }
+.desk--tall { height: 600px; }
+
+/* macOS menu bar + notch */
+.menubar {
+  position: absolute; inset: 0 0 auto 0; height: var(--bar-h); z-index: 20;
+  display: flex; align-items: center; gap: 18px; padding: 0 14px;
+  background: rgba(20,18,24,.55); color: #fff; font-size: 13px; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+[data-theme="light"] .menubar { background: rgba(255,255,255,.55); color: #111; }
+.menubar b { font-weight: 700; }
+.menubar__right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.menubar .ico { width: 16px; height: 16px; }
+.menubar__moa { width: 26px; height: 22px; display: grid; place-items: center; border-radius: 5px; border: 0; background: none; padding: 0; cursor: pointer; }
+.menubar__moa img { width: 18px; height: 18px; }
+.menubar__moa.is-active { background: rgba(255,255,255,.25); }
+[data-theme="light"] .menubar__moa.is-active { background: rgba(0,0,0,.12); }
+.notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: var(--notch-w); height: var(--bar-h); background: #000; border-radius: 0 0 12px 12px; z-index: 25; }
+.desk--nonotch .notch { display: none; }
+.desk--nonotch .pill--hidden { display: none; }
+
+/* Windows 11 taskbar; pill floats at top centre */
+.desk--win { --notch-w: 6px; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; background: linear-gradient(150deg, #1B2A4A 0%, #23497A 50%, #3A6EA5 100%); }
+[data-theme="light"] .desk--win { background: linear-gradient(150deg, #CFE0F5 0%, #A9C8EC 50%, #E3EEF9 100%); }
+.desk--win .pill { top: 8px; border-radius: 18px; }
+.desk--win .pill.is-open { border-radius: 24px; }
+.desk--win .pill--hidden { display: none; }
+.taskbar {
+  position: absolute; inset: auto 0 0 0; height: 46px; z-index: 20; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: rgba(28,28,32,.82); color: #fff; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-size: 12px;
+}
+[data-theme="light"] .taskbar { background: rgba(243,243,243,.85); color: #111; }
+.taskbar__btn { width: 38px; height: 38px; border-radius: 6px; display: grid; place-items: center; border: 0; background: none; color: inherit; padding: 0; cursor: pointer; }
+.taskbar__btn:hover, .taskbar__btn.is-active { background: rgba(255,255,255,.12); }
+[data-theme="light"] .taskbar__btn:hover, [data-theme="light"] .taskbar__btn.is-active { background: rgba(0,0,0,.06); }
+.taskbar__start { color: #4CC2FF; }
+[data-theme="light"] .taskbar__start { color: #0067C0; }
+.taskbar__tray { position: absolute; right: 8px; top: 0; bottom: 0; display: flex; align-items: center; gap: 6px; }
+.taskbar__tray img { width: 18px; height: 18px; }
+.taskbar__clock { text-align: right; line-height: 1.25; padding: 0 6px; }
+
+/* Window chrome */
+.win { position: absolute; z-index: 10; border-radius: 12px; overflow: hidden; background: var(--surface); box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 30px 70px -20px rgba(0,0,0,.55); }
+.win__bar { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--s1); color: var(--ink2); font: 600 12.5px -apple-system, "Segoe UI", system-ui, sans-serif; }
+.win__lights { display: flex; gap: 7px; }
+.win__lights i { width: 12px; height: 12px; border-radius: 50%; background: #FF5F57; }
+.win__lights i:nth-child(2) { background: #FEBC2E; }
+.win__lights i:nth-child(3) { background: #28C840; }
+.win__name { flex: 1; text-align: center; margin-right: 52px; }
+.desk--win .win { border-radius: 8px; }
+.desk--win .win__name { text-align: left; margin: 0; }
+.win__ctrls { display: flex; margin-right: -12px; }
+.win__ctrls i { width: 44px; height: 34px; display: grid; place-items: center; font-style: normal; font-size: 13px; }
+.center { left: 50%; top: 52%; transform: translate(-50%, -50%); }
+.desk--win .center { top: 46%; }
+
+/* Fake blocked app behind pill / shield (Steam-like library) */
+.fake-app { position: absolute; inset: 44px 40px 20px; z-index: 5; border-radius: 10px; overflow: hidden; background: #171A21; box-shadow: 0 30px 70px -20px rgba(0,0,0,.6); }
+.desk--win .fake-app { inset: 24px 40px 62px; }
+.fake-app__bar { height: 32px; background: #0E1015; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #C7D5E0; font: 700 12px system-ui, sans-serif; }
+.fake-app__grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; padding: 16px; }
+.fake-app__grid i { aspect-ratio: 3 / 4; border-radius: 6px; background: linear-gradient(160deg, #2A475E, #1B2838); }
+.fake-app__grid i:nth-child(3n) { background: linear-gradient(160deg, #5C3B6E, #2A1F3A); }
+.fake-app__grid i:nth-child(4n) { background: linear-gradient(160deg, #6E4B2A, #2E1E12); }
+
+/* Placement helpers inside a desk */
+.at-menubar-moa { top: 36px; right: 110px; }
+.at-tray { right: 10px; bottom: 54px; }
+.at-top-right { top: 40px; right: 14px; }
+.desk--win .at-top-right { top: auto; bottom: 56px; }
+.overlay { position: absolute; inset: 0; z-index: 48; display: grid; place-items: center; background: rgba(0,0,0,.35); }
+.desk--win .shield { bottom: 46px; }
+.desk:not(.desk--win) .shield { top: var(--bar-h); }

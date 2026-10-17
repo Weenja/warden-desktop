@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warden extension · mockups</title>
+<link rel="icon" href="../shared/brand/favicon.svg">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="ui.css">
+<style>
+/* Gallery-only styles (not part of the extension UI) */
+.gal{max-width:1180px;margin:0 auto;padding:24px 24px 80px}
+.gal-top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:12px 24px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.gal-top img{height:28px}
+.gal-top h1{margin:0;font:800 18px/1 var(--f)}
+.gal-top nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.gal-top nav a{padding:8px 10px;border-radius:14px;color:var(--ink2);font-weight:700;text-decoration:none}
+.gal-top nav a:hover{background:var(--s2);color:var(--ink)}
+.theme-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:20px;border:1.5px solid var(--outline);background:var(--surface);font-weight:800}
+[data-theme="light"] .when-dark,:root:not([data-theme="light"]) .when-light{display:none}
+.sec{padding-top:44px;scroll-margin-top:70px}
+.sec>h2{margin:0;font:800 26px/1.2 var(--f)}
+.sec>h2 b{color:var(--pri-ink)}
+.sec>p{margin:6px 0 16px;color:var(--ink2);font-weight:600}
+.seg{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.seg button{height:38px;padding:0 14px;border-radius:19px;border:1.5px solid var(--outline);background:transparent;font-weight:750}
+.seg button[aria-pressed="true"]{background:var(--pri-c);color:var(--on-pri-c);border-color:transparent}
+.row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+
+/* Fake browser chrome toolbars for the badge strip */
+.tb{display:flex;align-items:center;gap:26px;padding:14px 26px 18px;border-radius:14px;flex-wrap:wrap}
+.tb--dark{background:#35363A;color:#E8EAED}
+.tb--light{background:#F1F3F4;color:#202124;border:1px solid var(--line)}
+.tb figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:70px}
+.tb figcaption{font:700 12.5px/1.2 var(--f);opacity:.9;text-align:center}
+.tb .sizes{display:flex;align-items:flex-end;gap:16px;height:40px}
+
+/* Fake browser window */
+.win{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--bg);box-shadow:0 24px 60px -30px var(--shadow);width:100%}
+.win-bar{display:flex;align-items:center;gap:10px;height:48px;padding:0 12px;background:var(--s2)}
+.win-dots{display:flex;gap:7px}.win-dots i{width:12px;height:12px;border-radius:50%;background:var(--outline2)}
+.win-url{flex:1;display:flex;align-items:center;gap:8px;height:32px;padding:0 14px;border-radius:16px;background:var(--s1);color:var(--ink2);font-weight:650;font-size:14px}
+.win-ext{position:relative;display:grid;place-items:center;width:36px;height:36px;border-radius:18px}
+.win-ext.is-open{background:var(--s3)}
+.win-body{position:relative;height:var(--h,560px);overflow:hidden}
+.win-body>.popup{position:absolute;top:6px;right:10px;z-index:6}
+/* Placeholder page content */
+.fake{padding:20px;display:grid;grid-template-columns:2fr 1fr;gap:16px;opacity:.55}
+.fake i{display:block;border-radius:12px;background:var(--s2)}
+.fake .v{height:300px}.fake .s{height:70px}
+.fake-col{display:flex;flex-direction:column;gap:12px}
+.fake-text{height:14px!important;border-radius:7px!important;width:80%}
+.dim::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.35)}
+
+/* Phone frame */
+.phone{width:340px;height:700px;border-radius:44px;padding:10px;background:#0B0A0C;box-shadow:0 30px 60px -30px var(--shadow)}
+.phone-screen{position:relative;height:100%;border-radius:34px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+.phone-status{display:flex;justify-content:space-between;padding:10px 22px 4px;font:700 13px/1 var(--f)}
+.phone-url{display:flex;align-items:center;gap:8px;margin:6px 10px;height:40px;padding:0 14px;border-radius:20px;background:var(--s2);color:var(--ink2);font-weight:650;font-size:14px}
+.phone-body{position:relative;flex:1;overflow:hidden}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-radius:26px 26px 0 0;padding:10px 16px 20px;display:flex;flex-direction:column;gap:12px}
+.sheet-grip{width:36px;height:4px;border-radius:2px;background:var(--outline2);margin:0 auto 4px}
+.sheet .popup{width:auto;border:0;box-shadow:none;padding:0;background:transparent}
+.cap{margin:10px 0 0;text-align:center;font-weight:700;color:var(--ink2)}
+.decide{margin-top:12px;padding:12px 16px;border-radius:16px;background:var(--pri-c);color:var(--on-pri-c);font-weight:650}
+</style>
+</head>
+<body>
+
+<!-- Icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M2 19h20"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 6.5L12 13l8.5-6.5"/></symbol>
+  <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-google" viewBox="0 0 24 24"><path fill="#4285F4" stroke="none" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z"/><path fill="#34A853" stroke="none" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" stroke="none" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z"/><path fill="#EA4335" stroke="none" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9s-2-.9-3.4-.9c-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.4.8 2.2-1.3 3-2.5c1-1.4 1.4-2.8 1.4-2.9 0 0-2.6-1-2.6-4.1zM13.9 5c.7-.8 1.2-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.9-1.4z"/></symbol>
+</svg>
+
+<header class="gal-top">
+  <img class="when-dark" src="../shared/brand/logo-horizontal-dark.svg" alt="Warden">
+  <img class="when-light" src="../shared/brand/logo-horizontal-light.svg" alt="Warden">
+  <h1>Browser extension</h1>
+  <nav>
+    <a href="#badge">Badge</a><a href="#popup">Popup</a><a href="#chip">Chip</a><a href="#blocked">Blocked</a><a href="#welcome">First run</a><a href="#android">Firefox Android</a>
+  </nav>
+  <button class="theme-btn" id="theme" type="button">
+    <svg class="ico when-dark"><use href="#i-sun"/></svg><svg class="ico when-light"><use href="#i-moon"/></svg>
+    <span class="when-dark">Light</span><span class="when-light">Dark</span>
+  </button>
+</header>
+
+<main class="gal">
+
+<!-- 1. Toolbar icon + badge -->
+<section class="sec" id="badge">
+  <h2><b>1</b> Toolbar icon</h2>
+  <p>The mochi mark with a badge. Shown at 32 px and 16 px on a dark and a light browser toolbar.</p>
+  <div class="row" style="flex-direction:column">
+    <div class="tb tb--dark">
+      <figure><div class="sizes"><span class="badge-icon tone-mint"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">42</span></span><span class="badge-icon tone-mint" style="--s:16px"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">42</span></span></div><figcaption>Linked · 42</figcaption></figure>
+      <figure><div class="sizes"><span class="badge-icon tone-amber"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">8</span></span><span class="badge-icon tone-amber" style="--s:16px"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">8</span></span></div><figcaption>Low · 8</figcaption></figure>
+      <figure><div class="sizes"><span class="badge-icon tone-coral"><img src="../shared/brand/favicon.svg" alt=""><span class="badge"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span></span><span class="badge-icon tone-coral" style="--s:16px"><img src="../shared/brand/favicon.svg" alt=""><span class="badge"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span></span></div><figcaption>0 · locked</figcaption></figure>
+      <figure><div class="sizes"><span class="badge-icon is-off"><img src="../shared/brand/favicon.svg" alt=""></span><span class="badge-icon is-off" style="--s:16px"><img src="../shared/brand/favicon.svg" alt=""></span></div><figcaption>Not linked</figcaption></figure>
+    </div>
+    <div class="tb tb--light">
+      <figure><div class="sizes"><span class="badge-icon tone-mint"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">42</span></span><span class="badge-icon tone-mint" style="--s:16px"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">42</span></span></div><figcaption>Linked · 42</figcaption></figure>
+      <figure><div class="sizes"><span class="badge-icon tone-amber"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">8</span></span><span class="badge-icon tone-amber" style="--s:16px"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">8</span></span></div><figcaption>Low · 8</figcaption></figure>
+      <figure><div class="sizes"><span class="badge-icon tone-coral"><img src="../shared/brand/favicon.svg" alt=""><span class="badge"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span></span><span class="badge-icon tone-coral" style="--s:16px"><img src="../shared/brand/favicon.svg" alt=""><span class="badge"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span></span></div><figcaption>0 · locked</figcaption></figure>
+      <figure><div class="sizes"><span class="badge-icon is-off"><img src="../shared/brand/favicon.svg" alt=""></span><span class="badge-icon is-off" style="--s:16px"><img src="../shared/brand/favicon.svg" alt=""></span></div><figcaption>Not linked</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Popup -->
+<section class="sec" id="popup" data-group="popup" data-state="a">
+  <h2><b>2</b> Popup</h2>
+  <p>Opens from the toolbar icon. Pick a state. The badge in the toolbar follows.</p>
+  <div class="seg" role="group" aria-label="Popup state">
+    <button data-set="popup:a">Draining</button>
+    <button data-set="popup:b">Site not guarded</button>
+    <button data-set="popup:c">Low battery</button>
+    <button data-set="popup:d">0 pts</button>
+    <button data-set="popup:e">App signed out</button>
+    <button data-set="popup:f">Standalone · sign in</button>
+    <button data-set="popup:g">Standalone · signed in</button>
+    <button data-set="popup:h">What it sends</button>
+  </div>
+
+  <div class="win">
+    <div class="win-bar">
+      <div class="win-dots"><i></i><i></i><i></i></div>
+      <div class="win-url">
+        <svg class="ico ico--sm"><use href="#i-lock"/></svg>
+        <span data-when="a c d e f g h">youtube.com/watch?v=…</span><span data-when="b">github.com/warden-app</span>
+      </div>
+      <span class="win-ext is-open">
+        <span class="badge-icon tone-mint" style="--s:22px" data-when="a b g h"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">42</span></span>
+        <span class="badge-icon tone-amber" style="--s:22px" data-when="c"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">8</span></span>
+        <span class="badge-icon tone-coral" style="--s:22px" data-when="d"><img src="../shared/brand/favicon.svg" alt=""><span class="badge"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span></span>
+        <span class="badge-icon is-off" style="--s:22px" data-when="e f"><img src="../shared/brand/favicon.svg" alt=""></span>
+      </span>
+    </div>
+    <div class="win-body" style="--h:640px">
+      <div class="fake"><i class="v"></i><div class="fake-col"><i class="s"></i><i class="s"></i><i class="s"></i><i class="s"></i></div><i class="fake-text"></i></div>
+      <!-- Standalone mode shows the in-page chip -->
+      <span class="chip-drain tone-mint" data-when="g"><img src="../shared/mochi/idle.webp" alt=""><span class="num">42 pts</span><span class="rate">−1/min</span></span>
+
+      <!-- (a) Linked, guarded, draining -->
+      <article class="popup tone-mint" data-when="a">
+        <header class="popup-head"><img src="../shared/brand/favicon.svg" alt="">Warden<span class="state-tag">Draining</span></header>
+        <div class="balance">
+          <img src="../shared/mochi/guard.webp" alt="MOA">
+          <div><div class="balance-num">42<small>pts</small></div><div class="battery" style="--v:.47"><i></i><b></b></div></div>
+        </div>
+        <div class="drain">
+          <span class="site-ico site-ico--yt">▶</span>
+          <div><div class="drain-title">youtube.com · −1/min</div><div class="drain-sub">42 pts left · guarded</div></div>
+        </div>
+        <button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop · close tab</button>
+        <footer class="popup-foot"><svg class="ico ico--sm"><use href="#i-laptop"/></svg>Linked to Warden on this Mac<button class="link" data-set="popup:h">What it sends</button></footer>
+      </article>
+
+      <!-- (b) Linked, site not guarded -->
+      <article class="popup tone-mint" data-when="b">
+        <header class="popup-head"><img src="../shared/brand/favicon.svg" alt="">Warden<span class="state-tag">Linked</span></header>
+        <div class="balance">
+          <img src="../shared/mochi/happy.webp" alt="MOA">
+          <div><div class="balance-num">42<small>pts</small></div><div class="battery" style="--v:.47"><i></i><b></b></div></div>
+        </div>
+        <div class="drain tone-grey">
+          <span class="site-ico site-ico--gh">G</span>
+          <div><div class="drain-title">github.com · free</div><div class="drain-sub">Not guarded. No drain.</div></div>
+        </div>
+        <p class="note">Guarded sites are set on your phone.</p>
+        <footer class="popup-foot"><svg class="ico ico--sm"><use href="#i-laptop"/></svg>Linked to Warden on this Mac<button class="link" data-set="popup:h">What it sends</button></footer>
+      </article>
+
+      <!-- (c) Low battery -->
+      <article class="popup tone-amber" data-when="c">
+        <header class="popup-head"><img src="../shared/brand/favicon.svg" alt="">Warden<span class="state-tag">Low battery</span></header>
+        <div class="balance">
+          <img src="../shared/mochi/worried.webp" alt="MOA">
+          <div><div class="balance-num">8<small>pts</small></div><div class="battery" style="--v:.09"><i></i><b></b></div></div>
+        </div>
+        <div class="drain">
+          <span class="site-ico site-ico--yt">▶</span>
+          <div><div class="drain-title">youtube.com · −1/min</div><div class="drain-sub">Low battery · MOA locks it at 0</div></div>
+        </div>
+        <button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop · close tab</button>
+        <footer class="popup-foot"><svg class="ico ico--sm"><use href="#i-laptop"/></svg>Linked to Warden on this Mac<button class="link" data-set="popup:h">What it sends</button></footer>
+      </article>
+
+      <!-- (d) 0 pts, locked -->
+      <article class="popup tone-coral" data-when="d">
+        <header class="popup-head"><img src="../shared/brand/favicon.svg" alt="">Warden<span class="state-tag">Locked</span></header>
+        <div class="balance">
+          <img src="../shared/mochi/locked.webp" alt="MOA">
+          <div><div class="balance-num">0<small>pts</small></div><div class="battery" style="--v:0"><i></i><b></b></div></div>
+        </div>
+        <div class="drain">
+          <span class="site-ico"><svg class="ico"><use href="#i-lock"/></svg></span>
+          <div><div class="drain-title">Guarded sites are locked</div><div class="drain-sub">Earn on your phone: steps, focus, tasks</div></div>
+        </div>
+        <button class="btn btn--tonal"><svg class="ico"><use href="#i-x"/></svg>Close tab</button>
+        <footer class="popup-foot"><svg class="ico ico--sm"><use href="#i-laptop"/></svg>Linked to Warden on this Mac<button class="link" data-set="popup:h">What it sends</button></footer>
+      </article>
+
+      <!-- (e) Desktop app found, signed out -->
+      <article class="popup tone-grey" data-when="e">
+        <header class="popup-head"><img src="../shared/brand/favicon.svg" alt="">Warden<span class="state-tag">Signed out</span></header>
+        <div class="popup-msg">
+          <img src="../shared/mochi/sleepy.webp" alt="MOA">
+          <h3>Sign in on this Mac</h3>
+          <p>Open the Warden app and sign in. This extension links by itself.</p>
+        </div>
+        <button class="btn btn--primary"><svg class="ico"><use href="#i-open"/></svg>Open Warden</button>
+        <footer class="popup-foot"><svg class="ico ico--sm"><use href="#i-laptop"/></svg>Warden app found on this Mac<button class="link" data-set="popup:h">What it sends</button></footer>
+      </article>
+
+      <!-- (f) Standalone, sign in -->
+      <article class="popup tone-grey" data-when="f">
+        <header class="popup-head"><img src="../shared/brand/favicon.svg" alt="">Warden<span class="state-tag">Not signed in</span></header>
+        <div class="popup-msg">
+          <img src="../shared/mochi/wink.webp" alt="MOA">
+          <h3>Sign in to Warden</h3>
+          <p>Use the same account as your phone.</p>
+        </div>
+        <div class="signin">
+          <button class="btn btn--google"><svg class="ico"><use href="#i-google"/></svg>Continue with Google</button>
+          <button class="btn btn--apple"><svg class="ico"><use href="#i-apple"/></svg>Continue with Apple</button>
+          <button class="btn btn--outline"><svg class="ico"><use href="#i-mail"/></svg>Email me a code</button>
+        </div>
+        <footer class="popup-foot"><svg class="ico ico--sm"><use href="#i-eye"/></svg>No Warden app here. Works on its own.<button class="link" data-set="popup:h">What it sends</button></footer>
+      </article>
+
+      <!-- (g) Standalone, signed in -->
+      <article class="popup tone-mint" data-when="g">
+        <header class="popup-head"><img src="../shared/brand/favicon.svg" alt="">Warden<span class="state-tag">Draining</span></header>
+        <div class="balance">
+          <img src="../shared/mochi/guard.webp" alt="MOA">
+          <div><div class="balance-num">42<small>pts</small></div><div class="battery" style="--v:.47"><i></i><b></b></div></div>
+        </div>
+        <div class="drain">
+          <span class="site-ico site-ico--yt">▶</span>
+          <div><div class="drain-title">youtube.com · −1/min</div><div class="drain-sub">42 pts left · guarded</div></div>
+        </div>
+        <button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop · close tab</button>
+        <div class="setting">Points chip on pages<button class="switch" role="switch" aria-checked="true" aria-label="Points chip on pages" data-flip></button></div>
+        <footer class="popup-foot"><svg class="ico ico--sm"><use href="#i-check"/></svg>Signed in as Jojo · Google<button class="link" data-set="popup:h">What it sends</button></footer>
+      </article>
+
+      <!-- (h) What this extension sends -->
+      <article class="popup tone-mint" data-when="h">
+        <header class="popup-head"><button class="back" data-set="popup:a" aria-label="Back"><svg class="ico"><use href="#i-back"/></svg></button>What this extension sends</header>
+        <div class="facts">
+          <h4>Sends</h4>
+          <div class="fact fact--yes"><svg class="ico"><use href="#i-check"/></svg>The site in the front tab, domain only</div>
+          <div class="fact fact--yes"><svg class="ico"><use href="#i-check"/></svg>How many seconds it was open</div>
+          <pre class="payload">{ "site": "youtube.com", "secs": 60 }</pre>
+          <h4>Never</h4>
+          <div class="fact fact--no"><svg class="ico"><use href="#i-x"/></svg>Full links, history, page text, what you type</div>
+        </div>
+        <div class="facts">
+          <h4>Permissions</h4>
+          <ul class="perms">
+            <li><code>tabs</code>See which site is in the front tab</li>
+            <li><code>declarativeNetRequest</code>Show the blocked page at 0 pts</li>
+            <li><code>nativeMessaging</code>Talk to the Warden app on this computer</li>
+            <li><code>idle</code>Stop draining when you step away</li>
+            <li><code>alarms</code>Count the minutes</li>
+            <li><code>storage</code>Remember your guarded sites</li>
+          </ul>
+        </div>
+        <footer class="popup-foot"><svg class="ico ico--sm"><use href="#i-code"/></svg>Open source · AGPL-3.0<a class="link" href="#">Read the code</a></footer>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- 3. In-page chip -->
+<section class="sec" id="chip" data-group="chip" data-state="mint">
+  <h2><b>3</b> In-page chip</h2>
+  <p>Standalone mode only (no Warden app, so no notch pill). Tap the chip to shrink it to a dot. Tap the dot to open it.</p>
+  <div class="seg" role="group" aria-label="Chip state">
+    <button data-set="chip:mint">42 pts</button>
+    <button data-set="chip:amber">Low · 8 pts</button>
+  </div>
+  <div class="win">
+    <div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-url"><svg class="ico ico--sm"><use href="#i-lock"/></svg>youtube.com/watch?v=…</div><span class="win-ext"><span class="badge-icon tone-mint" style="--s:22px"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">42</span></span></span></div>
+    <div class="win-body" style="--h:380px">
+      <div class="fake"><i class="v"></i><div class="fake-col"><i class="s"></i><i class="s"></i><i class="s"></i></div></div>
+      <button class="chip-drain tone-mint" data-when="mint" data-dot aria-label="42 points, minus 1 per minute. Tap to shrink."><img src="../shared/mochi/idle.webp" alt=""><span class="num">42 pts</span><span class="rate">−1/min</span></button>
+      <button class="chip-drain tone-amber" data-when="amber" data-dot aria-label="Low battery, 8 points. Tap to shrink."><img src="../shared/mochi/worried.webp" alt=""><span class="num">8 pts</span><span class="rate">Low · −1/min</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Blocked page -->
+<section class="sec" id="blocked">
+  <h2><b>4</b> Blocked page</h2>
+  <p>At 0 pts a guarded site is replaced by this page.</p>
+  <div class="win">
+    <div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-url"><svg class="ico ico--sm"><use href="#i-lock"/></svg>youtube.com</div><span class="win-ext"><span class="badge-icon tone-coral" style="--s:22px"><img src="../shared/brand/favicon.svg" alt=""><span class="badge"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span></span></span></div>
+    <div class="win-body" style="--h:640px">
+      <main class="blocked">
+        <img src="../shared/mochi/locked.webp" alt="MOA, locked">
+        <span class="blocked-site"><svg class="ico ico--sm"><use href="#i-lock"/></svg>youtube.com</span>
+        <h1>that's your lot.</h1>
+        <p>Out of points. Earn more to use youtube.com.</p>
+        <div class="btn-row">
+          <button class="btn btn--tonal"><svg class="ico"><use href="#i-back"/></svg>Go back</button>
+          <button class="btn btn--primary"><svg class="ico"><use href="#i-x"/></svg>Close tab</button>
+        </div>
+        <p class="blocked-foot">Guarded by you, on your phone · Warden is open source · <a class="link" href="#">Source code</a></p>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- 5. First-run tab -->
+<section class="sec" id="welcome" data-group="welcome" data-state="linked">
+  <h2><b>5</b> First-run tab</h2>
+  <p>Opens once after install.</p>
+  <div class="seg" role="group" aria-label="First-run mode">
+    <button data-set="welcome:linked">Warden app found</button>
+    <button data-set="welcome:solo">No Warden app (standalone)</button>
+  </div>
+  <div class="win">
+    <div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-url"><svg class="ico ico--sm"><use href="#i-lock"/></svg>Warden · Welcome</div><span class="win-ext"><span class="badge-icon tone-mint" style="--s:22px" data-when="linked"><img src="../shared/brand/favicon.svg" alt=""><span class="badge">42</span></span><span class="badge-icon is-off" style="--s:22px" data-when="solo"><img src="../shared/brand/favicon.svg" alt=""></span></span></div>
+    <div class="win-body" style="--h:auto">
+      <div class="welcome">
+        <div class="welcome-hero">
+          <img src="../shared/mochi/happy.webp" alt="MOA">
+          <div><h1>Warden is on</h1><p data-when="linked">Guarded sites now drain points here too.</p><p data-when="solo">Sign in to start.</p></div>
+        </div>
+
+        <div class="card tone-mint" data-when="linked">
+          <div class="status"><i class="dot"></i><div>Linked to Warden on this Mac<span>42 pts · same account as your phone</span></div></div>
+        </div>
+        <div class="card tone-grey" data-when="solo">
+          <h2>Sign in</h2>
+          <p class="note note--left">Same account as your phone.</p>
+          <div class="signin">
+            <button class="btn btn--google"><svg class="ico"><use href="#i-google"/></svg>Continue with Google</button>
+            <button class="btn btn--apple"><svg class="ico"><use href="#i-apple"/></svg>Continue with Apple</button>
+            <button class="btn btn--outline"><svg class="ico"><use href="#i-mail"/></svg>Email me a code</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>What it reads and sends</h2>
+          <div class="facts">
+            <div class="fact fact--yes"><svg class="ico"><use href="#i-check"/></svg>The domain of the front tab and how long it is open</div>
+            <div class="fact fact--no"><svg class="ico"><use href="#i-x"/></svg>No full links, no history, no page text</div>
+            <pre class="payload">{ "site": "youtube.com", "secs": 60 }</pre>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Permissions</h2>
+          <ul class="perms">
+            <li><code>tabs</code>See which site is in the front tab</li>
+            <li><code>declarativeNetRequest</code>Show the blocked page at 0 pts</li>
+            <li><code>nativeMessaging</code>Talk to the Warden app on this computer</li>
+            <li><code>idle</code>Stop draining when you step away</li>
+            <li><code>alarms</code>Count the minutes</li>
+            <li><code>storage</code>Remember your guarded sites</li>
+          </ul>
+          <p class="note note--left"><svg class="ico ico--sm" style="vertical-align:-3px"><use href="#i-code"/></svg> Open source, AGPL-3.0. <a class="link" href="#">Read the code</a></p>
+        </div>
+
+        <p class="note"><svg class="ico ico--sm" style="vertical-align:-3px"><use href="#i-phone"/></svg> Guarded sites are set on your phone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. Firefox on Android -->
+<section class="sec" id="android">
+  <h2><b>6</b> Firefox on Android</h2>
+  <p>Standalone mode. The popup opens as a bottom sheet.</p>
+  <div class="row">
+    <div>
+      <div class="phone"><div class="phone-screen">
+        <div class="phone-status"><span>9:41</span><span>▮▮ 82%</span></div>
+        <div class="phone-url"><svg class="ico ico--sm"><use href="#i-lock"/></svg>m.youtube.com</div>
+        <div class="phone-body dim">
+          <div class="fake" style="grid-template-columns:1fr"><i class="v" style="height:190px"></i><i class="s"></i><i class="s"></i><i class="s"></i></div>
+        </div>
+        <div class="sheet">
+          <div class="sheet-grip"></div>
+          <article class="popup tone-mint">
+            <header class="popup-head"><img src="../shared/brand/favicon.svg" alt="">Warden<span class="state-tag">Draining</span></header>
+            <div class="balance">
+              <img src="../shared/mochi/guard.webp" alt="MOA">
+              <div><div class="balance-num">42<small>pts</small></div><div class="battery" style="--v:.47"><i></i><b></b></div></div>
+            </div>
+            <div class="drain">
+              <span class="site-ico site-ico--yt">▶</span>
+              <div><div class="drain-title">youtube.com · −1/min</div><div class="drain-sub">42 pts left · guarded</div></div>
+            </div>
+            <button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop · close tab</button>
+          </article>
+        </div>
+      </div></div>
+      <p class="cap">Popup as bottom sheet</p>
+    </div>
+    <div>
+      <div class="phone"><div class="phone-screen">
+        <div class="phone-status"><span>9:41</span><span>▮▮ 82%</span></div>
+        <div class="phone-url"><svg class="ico ico--sm"><use href="#i-lock"/></svg>m.youtube.com</div>
+        <div class="phone-body">
+          <main class="blocked blocked--compact">
+            <img src="../shared/mochi/locked.webp" alt="MOA, locked">
+            <span class="blocked-site"><svg class="ico ico--sm"><use href="#i-lock"/></svg>youtube.com</span>
+            <h1>that's your lot.</h1>
+            <p>Out of points. Earn more to use youtube.com.</p>
+            <div class="btn-row">
+              <button class="btn btn--tonal"><svg class="ico"><use href="#i-back"/></svg>Go back</button>
+              <button class="btn btn--primary"><svg class="ico"><use href="#i-x"/></svg>Close tab</button>
+            </div>
+            <p class="blocked-foot">Guarded by you, on your phone · <a class="link" href="#">Source code</a></p>
+          </main>
+        </div>
+      </div></div>
+      <p class="cap">Blocked page</p>
+    </div>
+  </div>
+</section>
+
+</main>
+<script src="demo.js"></script>
+</body>
+</html>

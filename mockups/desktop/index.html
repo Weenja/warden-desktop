@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Warden desktop · mockups</title>
+<link rel="icon" href="../shared/brand/favicon.svg">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* Gallery page layout only */
+  html, body { margin: 0; background: var(--bg); }
+  [hidden] { display: none !important; }
+  body[data-os="mac"] .only-win, body[data-os="win"] .only-mac { display: none !important; }
+  .topbar { position: sticky; top: 0; z-index: 100; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; padding: 14px 28px; background: var(--hdr); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; font: 800 20px var(--f); margin-right: auto; }
+  .brand img { width: 32px; height: 32px; }
+  .brand small { font: 650 14px var(--f); color: var(--ink2); }
+  .group { display: flex; align-items: center; gap: 8px; }
+  .group__label { font: 800 12px var(--f); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
+  .seg { display: flex; padding: 3px; border-radius: 20px; background: var(--s2); }
+  .seg button { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: none; font: 750 14px var(--f); color: var(--ink2); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .seg button[aria-pressed="true"] { background: var(--pri); color: var(--on-pri); }
+  .theme-btn { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--outline); background: none; color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+  [data-theme="light"] .theme-btn .i-sun, :root:not([data-theme="light"]) .theme-btn .i-moon { display: none; }
+  main { max-width: 1320px; margin: 0 auto; padding: 24px 28px 80px; }
+  main h2 { font: 800 26px var(--f); margin: 28px 0 4px; }
+  main h2 + p { font: 600 15px var(--f); color: var(--ink2); margin: 0 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px 24px; }
+  .grid--3 { grid-template-columns: repeat(3, 1fr); }
+  figure { margin: 0; }
+  figcaption { font: 750 14px var(--f); color: var(--ink2); margin-top: 8px; }
+  figcaption b { color: var(--ink); }
+  /* cloned templates sit inside a positioned wrapper */
+  .js-tpl > .popover, .js-tpl > .toast, .js-tpl > .win, [class*="js-slot"] > .popover, [class*="js-slot"] > .toast, [class*="js-slot"] > .win { position: relative; }
+  .js-slot-popover, .js-slot-toast { position: absolute; z-index: 45; }
+</style>
+</head>
+<body class="wd" data-os="mac">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-batt" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2.5"/><path d="M22 10v4"/><rect x="4.5" y="9.5" width="11" height="5" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.1-1.2 2.9-2.4.9-1.3 1.3-2.7 1.3-2.7s-2.4-1-2.4-4zM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z"/></symbol>
+  <symbol id="i-win" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><rect x="3" y="3" width="8.5" height="8.5" rx="1"/><rect x="12.5" y="3" width="8.5" height="8.5" rx="1"/><rect x="3" y="12.5" width="8.5" height="8.5" rx="1"/><rect x="12.5" y="12.5" width="8.5" height="8.5" rx="1"/></g></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand"><img src="../shared/brand/favicon.svg" alt=""> Warden desktop </div>
+  <div class="group">
+    <span class="group__label">Computer</span>
+    <div class="seg" data-control="os">
+      <button data-value="mac" aria-pressed="true"><svg class="ico"><use href="#i-apple"/></svg>Mac</button>
+      <button data-value="win" aria-pressed="false"><svg class="ico"><use href="#i-win"/></svg>Windows</button>
+    </div>
+  </div>
+  <div class="group">
+    <span class="group__label">Pill</span>
+    <div class="seg" data-control="state">
+      <button data-value="hidden" aria-pressed="false">Hidden</button>
+      <button data-value="drain" aria-pressed="true">Draining</button>
+      <button data-value="low" aria-pressed="false">Low</button>
+      <button data-value="zero" aria-pressed="false">Zero</button>
+      <button data-value="noext" aria-pressed="false">No extension</button>
+    </div>
+  </div>
+  <div class="group only-mac">
+    <span class="group__label">Screen</span>
+    <div class="seg" data-control="screen">
+      <button data-value="notch" aria-pressed="true">Notch</button>
+      <button data-value="nonotch" aria-pressed="false">No notch</button>
+    </div>
+  </div>
+  <button class="theme-btn" data-control="theme" aria-label="Switch light or dark"><svg class="ico i-sun"><use href="#i-sun"/></svg><svg class="ico i-moon"><use href="#i-moon"/></svg></button>
+</header>
+
+<main>
+
+<!-- ================= LIVE DEMO ================= -->
+<h2>Try it</h2>
+<p>Pick a pill state above. Click the pill to open it. Click MOA in the <span class="only-mac">menu bar</span><span class="only-win">tray</span> for the panel.</p>
+
+<template id="tpl-popover">
+  <section class="popover" aria-label="Warden">
+    <div class="popover__head">
+      <span data-bind="face"><img class="moa" data-face="idle" src="../shared/mochi/idle.webp" alt="MOA"><img class="moa" data-face="worried" src="../shared/mochi/worried.webp" alt="MOA" hidden><img class="moa" data-face="locked" src="../shared/mochi/locked.webp" alt="MOA" hidden><img class="moa" data-face="sideeye" src="../shared/mochi/sideeye.webp" alt="MOA" hidden></span>
+      <div>
+        <div class="popover__bal"><span data-bind="bal">42</span><small>pts</small></div>
+        <div class="popover__state" data-bind="state">Battery 47%</div>
+      </div>
+    </div>
+    <div class="battery" data-bind="battery"><div class="battery__fill" data-bind="level" style="--level:47%"></div></div>
+    <div class="popover__now" data-bind="now"><span class="app-icon app-icon--sm" style="--c:#1B2838">S</span><span>Steam on this <span class="only-mac">Mac</span><span class="only-win">PC</span></span><b>−1/min</b></div>
+    <div class="popover__sec">
+      <div class="popover__sec-head"><h4 class="section-label">Guarded on this <span class="only-mac">Mac</span><span class="only-win">PC</span></h4><button class="link" data-action="edit"><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-edit"/></svg> Edit</button></div>
+      <div class="icon-strip">
+        <span class="app-icon" style="--c:#1B2838" title="Steam">S</span>
+        <span class="app-icon" style="--c:#5865F2" title="Discord">D</span>
+        <span class="app-icon" style="--c:#313131" title="Epic Games">E</span>
+        <span class="app-icon" style="--c:#148EFF" title="Battle.net">B</span>
+      </div>
+    </div>
+    <div class="popover__sec">
+      <div class="row" style="min-height:30px"><svg class="ico" style="color:var(--pri-ink)"><use href="#i-globe"/></svg><span class="row__text row__title">Sites: 8 from your phone</span><span class="row__sub"><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-phone"/></svg> Set on your phone</span></div>
+    </div>
+    <div class="popover__sec popover__browsers">
+      <div class="row"><span class="app-icon app-icon--sm" style="--c:#4285F4">C</span><span class="row__text">Chrome</span><span class="status status--ok"><svg class="ico"><use href="#i-check"/></svg>Linked</span></div>
+      <div class="row only-win"><span class="app-icon app-icon--sm" style="--c:#0078D4">e</span><span class="row__text">Edge</span><button class="btn btn--sm btn--outline"><svg class="ico" style="width:14px;height:14px"><use href="#i-download"/></svg>Get the extension</button></div>
+      <div class="row only-mac"><span class="app-icon app-icon--sm" style="--c:#1E90FF">S</span><span class="row__text">Safari</span><button class="btn btn--sm btn--outline"><svg class="ico" style="width:14px;height:14px"><use href="#i-download"/></svg>Get the extension</button></div>
+    </div>
+    <div class="popover__sec popover__crew">
+      <span class="avatars"><span style="background:#FFB4A2">E</span><span style="background:#9DF0CB">J</span><span style="background:#B5D8FF">O</span></span>
+      Emma, Jake and Olivia see it if you stop Warden.
+    </div>
+    <div class="popover__foot"><span>sam@gmail.com</span><button class="btn btn--sm btn--danger" data-action="quit"><svg class="ico" style="width:15px;height:15px"><use href="#i-power"/></svg>Quit Warden</button></div>
+  </section>
+</template>
+
+<template id="tpl-picker">
+  <div class="win" role="dialog" aria-label="Guarded apps">
+    <div class="win__bar"><span class="win__lights only-mac"><i></i><i></i><i></i></span><span class="win__name">Warden</span><span class="win__ctrls only-win"><i>—</i><i>☐</i><i>✕</i></span></div>
+    <div class="picker">
+      <h3 class="picker__title">Guarded apps on this <span class="only-mac">Mac</span><span class="only-win">PC</span></h3>
+      <p class="picker__lead">These drain points while they're open.</p>
+      <label class="field"><svg class="ico"><use href="#i-search"/></svg><input placeholder="Search apps"></label>
+      <ul class="picker__list">
+        <li><h4 class="section-label picker__group">Common picks</h4></li>
+        <li class="app-row"><span class="app-icon" style="--c:#1B2838">S</span><span class="app-row__name">Steam</span><label class="toggle"><input type="checkbox" checked aria-label="Steam"><span></span></label></li>
+        <li class="app-row"><span class="app-icon" style="--c:#5865F2">D</span><span class="app-row__name">Discord</span><label class="toggle"><input type="checkbox" checked aria-label="Discord"><span></span></label></li>
+        <li class="app-row"><span class="app-icon" style="--c:#313131">E</span><span class="app-row__name">Epic Games</span><label class="toggle"><input type="checkbox" checked aria-label="Epic Games"><span></span></label></li>
+        <li class="app-row"><span class="app-icon" style="--c:#148EFF">B</span><span class="app-row__name">Battle.net</span><label class="toggle"><input type="checkbox" checked aria-label="Battle.net"><span></span></label></li>
+        <li class="app-row"><span class="app-icon" style="--c:#D13639">R</span><span class="app-row__name">Riot Client</span><label class="toggle"><input type="checkbox" aria-label="Riot Client"><span></span></label></li>
+        <li class="app-row"><span class="app-icon" style="--c:#1DB954">♪</span><span class="app-row__name">Spotify</span><label class="toggle"><input type="checkbox" aria-label="Spotify"><span></span></label></li>
+        <li class="app-row"><span class="app-icon" style="--c:#E50914">N</span><span class="app-row__name">Netflix</span><label class="toggle"><input type="checkbox" aria-label="Netflix"><span></span></label></li>
+        <li><h4 class="section-label picker__group">All apps</h4></li>
+        <li class="app-row"><span class="app-icon" style="--c:#A259FF">F</span><span class="app-row__name">Figma</span><label class="toggle"><input type="checkbox" aria-label="Figma"><span></span></label></li>
+        <li class="app-row"><span class="app-icon" style="--c:#4A154B">#</span><span class="app-row__name">Slack</span><label class="toggle"><input type="checkbox" aria-label="Slack"><span></span></label></li>
+        <li class="app-row"><span class="app-icon" style="--c:#FA243C">♫</span><span class="app-row__name">Music</span><label class="toggle"><input type="checkbox" aria-label="Music"><span></span></label></li>
+      </ul>
+      <div class="picker__foot"><span><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-phone"/></svg> Sites are set on your phone.</span><button class="btn btn--primary btn--sm" data-action="close">Done</button></div>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-quit">
+  <div class="confirm" role="alertdialog" aria-label="Quit Warden">
+    <img class="moa" src="../shared/mochi/worried.webp" alt="">
+    <h3>Quit Warden?</h3>
+    <p>Your crew gets told you stopped protection.</p>
+    <div class="avatars"><span style="background:#FFB4A2">E</span><span style="background:#9DF0CB">J</span><span style="background:#B5D8FF">O</span></div>
+    <button class="btn btn--primary btn--block" data-action="close">Keep Warden on</button>
+    <button class="btn btn--danger btn--block" data-action="close">Quit and tell my crew</button>
+  </div>
+</template>
+
+<template id="tpl-shield">
+  <div class="shield" role="alertdialog" aria-label="Steam is locked">
+    <div class="shield__card">
+      <img class="moa" src="../shared/mochi/locked.webp" alt="MOA, locked">
+      <h2>that's your lot.</h2>
+      <p>Out of points. Earn more to use Steam.</p>
+      <button class="btn btn--primary" data-action="close-app"><svg class="ico"><use href="#i-stop"/></svg>Close Steam</button>
+      <p class="shield__earn"><svg class="ico"><use href="#i-phone"/></svg>Earn on your phone: walk, work out, focus.</p>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-toast">
+  <div class="toast" role="status">
+    <img class="moa" src="../shared/mochi/worried.webp" alt="">
+    <div><div class="toast__title">Low battery · 10 pts</div><div class="toast__text">Steam drains −1/min. MOA locks it at 0.</div></div>
+  </div>
+</template>
+
+<!-- Demo: Mac -->
+<div class="desk desk--tall only-mac js-demo" id="demo-mac">
+  <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Steam</b><span>Store</span><span>Library</span><span>View</span>
+    <span class="menubar__right"><button class="menubar__moa js-moa" aria-label="Warden"><img src="../shared/brand/favicon.svg" alt=""></button><svg class="ico"><use href="#i-wifi"/></svg><svg class="ico"><use href="#i-batt"/></svg><span>Fri 9:41</span></span></div>
+  <div class="notch"></div>
+  <div class="pill js-pill" role="button" tabindex="0"></div>
+  <div class="fake-app js-app"><div class="fake-app__bar">STEAM · Library</div><div class="fake-app__grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="js-slot-popover at-menubar-moa" hidden></div>
+  <div class="js-slot-toast at-top-right" hidden></div>
+  <div class="overlay js-slot-picker" hidden></div>
+  <div class="overlay js-slot-quit" hidden></div>
+  <div class="js-slot-shield" hidden></div>
+</div>
+
+<!-- Demo: Windows -->
+<div class="desk desk--tall desk--win only-win js-demo" id="demo-win">
+  <div class="pill js-pill" role="button" tabindex="0"></div>
+  <div class="fake-app js-app"><div class="fake-app__bar">STEAM · Library</div><div class="fake-app__grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="taskbar">
+    <span class="taskbar__btn taskbar__start"><svg class="ico"><use href="#i-win"/></svg></span>
+    <span class="taskbar__btn"><svg class="ico"><use href="#i-search"/></svg></span>
+    <span class="taskbar__btn"><span class="app-icon app-icon--sm" style="--c:#1B2838">S</span></span>
+    <span class="taskbar__btn"><span class="app-icon app-icon--sm" style="--c:#4285F4">C</span></span>
+    <span class="taskbar__tray"><span class="taskbar__btn" style="width:24px"><svg class="ico"><use href="#i-chev"/></svg></span><button class="taskbar__btn js-moa" style="width:32px" aria-label="Warden"><img src="../shared/brand/favicon.svg" alt=""></button><svg class="ico"><use href="#i-wifi"/></svg><span class="taskbar__clock">9:41<br>17-10-2026</span></span>
+  </div>
+  <div class="js-slot-popover at-tray" hidden></div>
+  <div class="js-slot-toast at-top-right" hidden></div>
+  <div class="overlay js-slot-picker" hidden></div>
+  <div class="overlay js-slot-quit" hidden></div>
+  <div class="js-slot-shield" hidden></div>
+</div>
+
+<!-- ================= MAC GALLERY ================= -->
+<section class="only-mac">
+<h2>Mac · every screen</h2>
+<p>Use the sun/moon button for light and dark.</p>
+
+<div class="grid">
+  <figure>
+    <div class="desk" style="height:540px">
+      <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Warden</b><span class="menubar__right"><svg class="ico"><use href="#i-wifi"/></svg><svg class="ico"><use href="#i-batt"/></svg><span>Fri 9:41</span></span></div>
+      <div class="notch"></div>
+      <div class="win center" style="width:380px">
+        <div class="win__bar"><span class="win__lights"><i></i><i></i><i></i></span><span class="win__name">Warden</span></div>
+        <div class="panel sign-in">
+          <img class="moa panel__moa" src="../shared/mochi/happy.webp" alt="MOA">
+          <h1 class="panel__title">Sign in to Warden</h1>
+          <p class="panel__lead">Use the account from your phone.</p>
+          <button class="btn btn--block btn--google"><span class="glyph-g">G</span><span>Continue with Google</span></button>
+          <button class="btn btn--block btn--apple"><svg class="ico"><use href="#i-apple"/></svg><span>Continue with Apple</span></button>
+          <button class="btn btn--block btn--outline"><svg class="ico"><use href="#i-mail"/></svg><span>Email me a code</span></button>
+          <p class="panel__foot"><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-phone"/></svg> No account? Get Warden on your phone first.</p>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Sign in</b> · same account as the phone</figcaption>
+  </figure>
+
+  <figure>
+    <div class="desk" style="height:540px">
+      <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Warden</b><span class="menubar__right"><svg class="ico"><use href="#i-wifi"/></svg><svg class="ico"><use href="#i-batt"/></svg><span>Fri 9:41</span></span></div>
+      <div class="notch"></div>
+      <div class="win center" style="width:380px">
+        <div class="win__bar"><span class="win__lights"><i></i><i></i><i></i></span><span class="win__name">Warden</span></div>
+        <div class="panel">
+          <img class="moa panel__moa" src="../shared/mochi/wink.webp" alt="MOA">
+          <h1 class="panel__title">Check your email</h1>
+          <p class="panel__lead">Type the code we sent to sam@gmail.com</p>
+          <div class="code-boxes"><span>4</span><span>8</span><span>1</span><span class="is-active"></span><span></span><span></span></div>
+          <button class="btn btn--block btn--primary">Sign in</button>
+          <p class="panel__foot"><button class="link">Send a new code</button></p>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Email code</b> · after "Email me a code"</figcaption>
+  </figure>
+
+  <figure>
+    <div class="desk" style="height:680px">
+      <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Warden</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><svg class="ico"><use href="#i-wifi"/></svg><svg class="ico"><use href="#i-batt"/></svg><span>Fri 9:41</span></span></div>
+      <div class="notch"></div>
+      <div class="win center" style="width:420px">
+        <div class="win__bar"><span class="win__lights"><i></i><i></i><i></i></span><span class="win__name">Warden</span></div>
+        <div class="panel panel--left">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><img class="moa" src="../shared/mochi/proud.webp" alt="" style="width:64px;height:64px"><div><h1 class="panel__title" style="margin:0">This Mac is linked</h1><p class="row__sub" style="margin:2px 0 0">Your points sync from your phone.</p></div></div>
+          <div class="linked__device"><svg class="ico ico--fill" style="width:22px;height:22px"><use href="#i-apple"/></svg><span class="row__text row__title">Sam's MacBook Air</span></div>
+          <div class="row" style="margin-bottom:8px"><span class="row__text row__title">Open at login</span><label class="toggle"><input type="checkbox" checked aria-label="Open at login"><span></span></label></div>
+          <h4 class="section-label">Browsers</h4>
+          <ul class="linked__list">
+            <li><span class="app-icon" style="--c:#4285F4">C</span><span class="row__text row__title">Chrome</span><span class="status status--ok"><svg class="ico"><use href="#i-check"/></svg>Linked</span></li>
+            <li><span class="app-icon" style="--c:#1E90FF">S</span><span class="row__text row__title">Safari</span><button class="btn btn--sm btn--outline"><svg class="ico" style="width:14px;height:14px"><use href="#i-download"/></svg>Get the extension</button></li>
+            <li><span class="app-icon" style="--c:#FF7139">F</span><span class="row__text row__title">Firefox</span><button class="btn btn--sm btn--outline"><svg class="ico" style="width:14px;height:14px"><use href="#i-download"/></svg>Get the extension</button></li>
+          </ul>
+          <p class="note"><svg class="ico"><use href="#i-warn"/></svg>A browser without the extension drains the whole time it's in front.</p>
+          <button class="btn btn--block btn--primary" style="margin-top:14px">Done</button>
+          <p class="panel__foot" style="text-align:center">Warden stays in the menu bar.</p>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Linked</b> · then the window closes to the menu bar</figcaption>
+  </figure>
+
+  <figure>
+    <div class="desk" style="height:680px">
+      <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Steam</b><span>Store</span><span>Library</span><span class="menubar__right"><span class="menubar__moa is-active"><img src="../shared/brand/favicon.svg" alt=""></span><svg class="ico"><use href="#i-wifi"/></svg><svg class="ico"><use href="#i-batt"/></svg><span>Fri 9:41</span></span></div>
+      <div class="notch"></div>
+      <div class="pill"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#1B2838">S</span></span><span></span><span class="pill__pts">42 pts</span></div>
+      <div class="fake-app"><div class="fake-app__bar">STEAM · Library</div><div class="fake-app__grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <div class="js-tpl at-menubar-moa" data-tpl="tpl-popover" style="position:absolute"></div>
+    </div>
+    <figcaption><b>Popover</b> · click MOA in the menu bar</figcaption>
+  </figure>
+</div>
+
+<h2>Mac · drain pill</h2>
+<p>Black, grows out of the notch. Mint = fine, amber = low, coral = zero.</p>
+<div class="grid grid--3">
+  <figure><div class="desk desk--short"><div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Finder</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>9:41</span></span></div><div class="notch"></div></div>
+    <figcaption><b>Hidden</b> · nothing drains, just the notch</figcaption></figure>
+
+  <figure><div class="desk desk--short"><div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Chrome</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>9:41</span></span></div><div class="notch"></div>
+    <div class="pill"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#FF0000">▶</span></span><span></span><span class="pill__pts">42 pts</span></div></div>
+    <figcaption><b>Draining</b> · YouTube tab, 42 pts</figcaption></figure>
+
+  <figure><div class="desk desk--short"><div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Steam</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>9:41</span></span></div><div class="notch"></div>
+    <div class="pill pill--low"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#1B2838">S</span></span><span></span><span class="pill__pts">9 pts</span></div></div>
+    <figcaption><b>Low</b> · 10 pts or less turns amber</figcaption></figure>
+
+  <figure><div class="desk desk--tall" style="height:300px"><div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Chrome</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>9:41</span></span></div><div class="notch"></div>
+    <div class="pill is-open"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#FF0000">▶</span></span><span></span><span class="pill__pts">42 pts</span>
+      <div class="pill__panel"><p class="pill__title"><span class="app-icon app-icon--sm" style="--c:#FF0000">▶</span>YouTube · 42 pts left</p><p class="pill__sub">−1/min while it's open</p><div class="battery"><div class="battery__fill" style="--level:47%"></div></div><div class="pill__actions"><button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop</button></div><p class="pill__hint">Stop closes the YouTube tab.</p></div></div></div>
+    <figcaption><b>Open</b> · hover or click the pill</figcaption></figure>
+
+  <figure><div class="desk desk--tall" style="height:300px"><div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Steam</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>9:41</span></span></div><div class="notch"></div>
+    <div class="pill pill--low is-open"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#1B2838">S</span></span><span></span><span class="pill__pts">9 pts</span>
+      <div class="pill__panel"><p class="pill__title"><span class="app-icon app-icon--sm" style="--c:#1B2838">S</span>Steam · 9 pts left</p><p class="pill__sub">Low battery · −1/min · MOA locks it at 0</p><div class="battery battery--low"><div class="battery__fill" style="--level:10%"></div></div><div class="pill__actions"><button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop</button></div><p class="pill__hint">Stop closes Steam.</p></div></div></div>
+    <figcaption><b>Low, open</b></figcaption></figure>
+
+  <figure><div class="desk desk--tall" style="height:300px"><div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Steam</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>9:41</span></span></div><div class="notch"></div>
+    <div class="pill pill--zero is-open"><span class="pill__lead"><svg class="ico"><use href="#i-lock"/></svg></span><span></span><span class="pill__pts">0 pts</span>
+      <div class="pill__panel"><p class="pill__title"><img class="moa" src="../shared/mochi/locked.webp" alt="" style="width:28px;height:28px">Steam · 0 pts</p><p class="pill__sub">MOA locks it now.</p><div class="battery battery--zero"><div class="battery__fill" style="--level:0%"></div></div></div></div></div>
+    <figcaption><b>Zero</b> · lock, then the shield opens</figcaption></figure>
+
+  <figure><div class="desk desk--tall" style="height:300px"><div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Arc</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>9:41</span></span></div><div class="notch"></div>
+    <div class="pill pill--noext is-open"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#FF5A5F">A</span></span><span></span><span class="pill__pts">42 pts</span>
+      <div class="pill__panel"><p class="pill__title"><span class="app-icon app-icon--sm" style="--c:#FF5A5F">A</span>Arc · drains while it's open</p><p class="pill__sub">No Warden extension in Arc · −1/min</p><div class="battery"><div class="battery__fill" style="--level:47%"></div></div><div class="pill__actions"><button class="btn btn--outline"><svg class="ico"><use href="#i-download"/></svg>Get the extension</button><button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop</button></div></div></div></div>
+    <figcaption><b>Browser with no extension</b> · whole browser drains</figcaption></figure>
+
+  <figure><div class="desk desk--short desk--nonotch"><div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Chrome</b><span>File</span><span>Edit</span><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>9:41</span></span></div>
+    <div class="pill"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#FF0000">▶</span></span><span></span><span class="pill__pts">42 pts</span></div></div>
+    <figcaption><b>No notch / external display</b> · hangs from the top centre</figcaption></figure>
+
+  <figure><div class="desk desk--short"><div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Finder</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>9:41</span></span></div><div class="notch"></div>
+    <div class="pill"><span class="pill__lead"><img class="moa" src="../shared/mochi/idle.webp" alt="MOA"></span><span></span><span class="pill__pts">42 pts</span></div></div>
+    <figcaption><b>Tiny MOA</b> · when the app has no icon</figcaption></figure>
+</div>
+
+<h2>Mac · picker, quit, shield, toast</h2>
+<p>Apps are per computer. Sites come from the phone.</p>
+<div class="grid">
+  <figure>
+    <div class="desk" style="height:620px">
+      <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Warden</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>Fri 9:41</span></span></div>
+      <div class="notch"></div>
+      <div class="js-tpl center" data-tpl="tpl-picker" style="position:absolute;z-index:10"></div>
+    </div>
+    <figcaption><b>App picker</b> · from Edit in the popover</figcaption>
+  </figure>
+  <figure>
+    <div class="desk" style="height:620px">
+      <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Warden</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>Fri 9:41</span></span></div>
+      <div class="notch"></div>
+      <div class="overlay js-tpl" data-tpl="tpl-quit"></div>
+    </div>
+    <figcaption><b>Quit</b> · quitting tells the crew</figcaption>
+  </figure>
+  <figure>
+    <div class="desk" style="height:480px">
+      <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Steam</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>Fri 9:41</span></span></div>
+      <div class="notch"></div>
+      <div class="pill pill--zero"><span class="pill__lead"><svg class="ico"><use href="#i-lock"/></svg></span><span></span><span class="pill__pts">0 pts</span></div>
+      <div class="fake-app"><div class="fake-app__bar">STEAM · Library</div><div class="fake-app__grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <div class="js-tpl" data-tpl="tpl-shield"></div>
+    </div>
+    <figcaption><b>Shield</b> · at 0, over the blocked app</figcaption>
+  </figure>
+  <figure>
+    <div class="desk" style="height:480px">
+      <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Steam</b><span class="menubar__right"><span class="menubar__moa"><img src="../shared/brand/favicon.svg" alt=""></span><span>Fri 9:41</span></span></div>
+      <div class="notch"></div>
+      <div class="pill pill--low"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#1B2838">S</span></span><span></span><span class="pill__pts">10 pts</span></div>
+      <div class="fake-app"><div class="fake-app__bar">STEAM · Library</div><div class="fake-app__grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <div class="js-tpl at-top-right" data-tpl="tpl-toast" style="position:absolute;z-index:45"></div>
+    </div>
+    <figcaption><b>Low battery toast</b> · once, at 10 pts</figcaption>
+  </figure>
+</div>
+</section>
+
+<!-- ================= WINDOWS GALLERY ================= -->
+<section class="only-win">
+<h2>Windows 11 · every screen</h2>
+<p>Same pill, top centre of the screen. Warden lives in the tray.</p>
+<div class="grid">
+  <figure>
+    <div class="desk desk--win" style="height:560px">
+      <div class="win center" style="width:380px">
+        <div class="win__bar"><span class="win__name">Warden</span><span class="win__ctrls"><i>—</i><i>☐</i><i>✕</i></span></div>
+        <div class="panel sign-in">
+          <img class="moa panel__moa" src="../shared/mochi/happy.webp" alt="MOA">
+          <h1 class="panel__title">Sign in to Warden</h1>
+          <p class="panel__lead">Use the account from your phone.</p>
+          <button class="btn btn--block btn--google"><span class="glyph-g">G</span><span>Continue with Google</span></button>
+          <button class="btn btn--block btn--apple"><svg class="ico"><use href="#i-apple"/></svg><span>Continue with Apple</span></button>
+          <button class="btn btn--block btn--outline"><svg class="ico"><use href="#i-mail"/></svg><span>Email me a code</span></button>
+          <p class="panel__foot"><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-phone"/></svg> No account? Get Warden on your phone first.</p>
+        </div>
+      </div>
+      <div class="taskbar"><span class="taskbar__btn taskbar__start"><svg class="ico"><use href="#i-win"/></svg></span><span class="taskbar__btn"><svg class="ico"><use href="#i-search"/></svg></span><span class="taskbar__tray"><span class="taskbar__clock">9:41<br>17-10-2026</span></span></div>
+    </div>
+    <figcaption><b>Sign in</b></figcaption>
+  </figure>
+  <figure>
+    <div class="desk desk--win" style="height:560px">
+      <div class="pill"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#1B2838">S</span></span><span></span><span class="pill__pts">42 pts</span></div>
+      <div class="fake-app"><div class="fake-app__bar">STEAM · Library</div><div class="fake-app__grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <div class="js-tpl at-tray" data-tpl="tpl-popover" style="position:absolute"></div>
+      <div class="taskbar"><span class="taskbar__btn taskbar__start"><svg class="ico"><use href="#i-win"/></svg></span><span class="taskbar__btn"><svg class="ico"><use href="#i-search"/></svg></span><span class="taskbar__btn"><span class="app-icon app-icon--sm" style="--c:#1B2838">S</span></span><span class="taskbar__tray"><span class="taskbar__btn is-active" style="width:32px"><img src="../shared/brand/favicon.svg" alt=""></span><span class="taskbar__clock">9:41<br>17-10-2026</span></span></div>
+    </div>
+    <figcaption><b>Tray flyout</b> · click MOA in the tray</figcaption>
+  </figure>
+</div>
+
+<h2>Windows · drain pill</h2>
+<p>Floats at the top centre. Same states as Mac.</p>
+<div class="grid grid--3">
+  <figure><div class="desk desk--win desk--short"><div class="pill"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#FF0000">▶</span></span><span></span><span class="pill__pts">42 pts</span></div></div><figcaption><b>Draining</b></figcaption></figure>
+  <figure><div class="desk desk--win desk--short"><div class="pill pill--low"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#1B2838">S</span></span><span></span><span class="pill__pts">9 pts</span></div></div><figcaption><b>Low</b></figcaption></figure>
+  <figure><div class="desk desk--win desk--short"><div class="pill pill--zero"><span class="pill__lead"><svg class="ico"><use href="#i-lock"/></svg></span><span></span><span class="pill__pts">0 pts</span></div></div><figcaption><b>Zero</b> · shield opens next</figcaption></figure>
+  <figure><div class="desk desk--win" style="height:280px"><div class="pill is-open"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#FF0000">▶</span></span><span></span><span class="pill__pts">42 pts</span>
+    <div class="pill__panel"><p class="pill__title"><span class="app-icon app-icon--sm" style="--c:#FF0000">▶</span>YouTube · 42 pts left</p><p class="pill__sub">−1/min while it's open</p><div class="battery"><div class="battery__fill" style="--level:47%"></div></div><div class="pill__actions"><button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop</button></div><p class="pill__hint">Stop closes the YouTube tab.</p></div></div></div><figcaption><b>Open</b></figcaption></figure>
+  <figure><div class="desk desk--win" style="height:280px"><div class="pill pill--low is-open"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#1B2838">S</span></span><span></span><span class="pill__pts">9 pts</span>
+    <div class="pill__panel"><p class="pill__title"><span class="app-icon app-icon--sm" style="--c:#1B2838">S</span>Steam · 9 pts left</p><p class="pill__sub">Low battery · −1/min · MOA locks it at 0</p><div class="battery battery--low"><div class="battery__fill" style="--level:10%"></div></div><div class="pill__actions"><button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop</button></div></div></div></div><figcaption><b>Low, open</b></figcaption></figure>
+  <figure><div class="desk desk--win" style="height:280px"><div class="pill pill--noext is-open"><span class="pill__lead"><span class="app-icon app-icon--xs" style="--c:#0078D4">e</span></span><span></span><span class="pill__pts">42 pts</span>
+    <div class="pill__panel"><p class="pill__title"><span class="app-icon app-icon--sm" style="--c:#0078D4">e</span>Edge · drains while it's open</p><p class="pill__sub">No Warden extension in Edge · −1/min</p><div class="battery"><div class="battery__fill" style="--level:47%"></div></div><div class="pill__actions"><button class="btn btn--outline"><svg class="ico"><use href="#i-download"/></svg>Get the extension</button><button class="btn btn--stop"><svg class="ico"><use href="#i-stop"/></svg>Stop</button></div></div></div></div><figcaption><b>Browser with no extension</b></figcaption></figure>
+</div>
+
+<h2>Windows · picker and shield</h2>
+<p></p>
+<div class="grid">
+  <figure>
+    <div class="desk desk--win" style="height:620px">
+      <div class="js-tpl center" data-tpl="tpl-picker" style="position:absolute;z-index:10;top:47%"></div>
+      <div class="taskbar"><span class="taskbar__btn taskbar__start"><svg class="ico"><use href="#i-win"/></svg></span><span class="taskbar__btn"><svg class="ico"><use href="#i-search"/></svg></span><span class="taskbar__tray"><span class="taskbar__clock">9:41<br>17-10-2026</span></span></div>
+    </div>
+    <figcaption><b>App picker</b></figcaption>
+  </figure>
+  <figure>
+    <div class="desk desk--win" style="height:620px">
+      <div class="pill pill--zero"><span class="pill__lead"><svg class="ico"><use href="#i-lock"/></svg></span><span></span><span class="pill__pts">0 pts</span></div>
+      <div class="fake-app"><div class="fake-app__bar">STEAM · Library</div><div class="fake-app__grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <div class="js-tpl" data-tpl="tpl-shield"></div>
+      <div class="taskbar"><span class="taskbar__btn taskbar__start"><svg class="ico"><use href="#i-win"/></svg></span><span class="taskbar__btn"><span class="app-icon app-icon--sm" style="--c:#1B2838">S</span></span><span class="taskbar__tray"><span class="taskbar__clock">9:41<br>17-10-2026</span></span></div>
+    </div>
+    <figcaption><b>Shield</b> · covers the screen, taskbar stays</figcaption>
+  </figure>
+</div>
+</section>
+
+</main>
+<script src="demo.js"></script>
+</body>
+</html>
