@@ -116,6 +116,15 @@
     r.dataset.theme === 'light' ? r.removeAttribute('data-theme') : (r.dataset.theme = 'light');
   });
 
+  // Sign in: "Get Warden on your phone" opens and closes the QR card under it.
+  $$('[data-action=toggle-qr]').forEach(b => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') !== 'true';
+    b.setAttribute('aria-expanded', String(open));
+    const card = b.parentElement.nextElementSibling;
+    card.hidden = !open;
+    if (open) { card.classList.remove('is-opening'); void card.offsetWidth; card.classList.add('is-opening'); }
+  }));
+
   // Deep link for screenshots and sharing: #light, #win, #low ...
   const h = location.hash.slice(1).split(',');
   if (h.includes('light')) document.documentElement.dataset.theme = 'light';

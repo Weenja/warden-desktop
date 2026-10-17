@@ -47,6 +47,7 @@
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
   <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M14 14h.01M20 14h.01M17 17h.01M14 20h.01M20 20h.01"/></symbol>
   <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
   <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
@@ -227,7 +228,7 @@
 
 <div class="grid">
   <figure>
-    <div class="desk" style="height:540px">
+    <div class="desk" style="height:740px">
       <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Warden</b><span class="menubar__right"><svg class="ico"><use href="#i-wifi"/></svg><svg class="ico"><use href="#i-batt"/></svg><span>Fri 9:41</span></span></div>
       <div class="notch"></div>
       <div class="win center" style="width:380px">
@@ -239,15 +240,20 @@
           <button class="btn btn--block btn--google"><span class="glyph-g">G</span><span>Continue with Google</span></button>
           <button class="btn btn--block btn--apple"><svg class="ico"><use href="#i-apple"/></svg><span>Continue with Apple</span></button>
           <button class="btn btn--block btn--outline"><svg class="ico"><use href="#i-mail"/></svg><span>Email me a code</span></button>
-          <p class="panel__foot"><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-phone"/></svg> No account? Get Warden on your phone first.</p>
+          <p class="panel__foot">No account? <button class="link" data-action="toggle-qr" aria-expanded="true"><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-qr"/></svg> Get Warden on your phone</button></p>
+          <div class="qr-card">
+            <img class="qr-card__code" src="../shared/get-warden-qr.svg" alt="QR code for getwarden.app">
+            <p class="qr-card__hint">Scan with your phone's camera</p>
+            <button class="qr-card__site">getwarden.app</button>
+          </div>
         </div>
       </div>
     </div>
-    <figcaption><b>Sign in</b> · same account as the phone</figcaption>
+    <figcaption><b>Sign in</b> · same account as the phone; "Get Warden on your phone" opens and closes the QR card</figcaption>
   </figure>
 
   <figure>
-    <div class="desk" style="height:540px">
+    <div class="desk" style="height:740px">
       <div class="menubar"><svg class="ico ico--fill"><use href="#i-apple"/></svg><b>Warden</b><span class="menubar__right"><svg class="ico"><use href="#i-wifi"/></svg><svg class="ico"><use href="#i-batt"/></svg><span>Fri 9:41</span></span></div>
       <div class="notch"></div>
       <div class="win center" style="width:380px">
@@ -256,8 +262,12 @@
           <img class="moa panel__moa" src="../shared/mochi/worried.webp" alt="MOA">
           <h1 class="panel__title" style="overflow-wrap:anywhere">No Warden account for sam@gmail.com</h1>
           <p class="panel__lead">Set up Warden on your phone first. Then sign in here with the same Google account.</p>
+          <div class="qr-card">
+            <img class="qr-card__code" src="../shared/get-warden-qr.svg" alt="QR code for getwarden.app">
+            <p class="qr-card__hint">Scan with your phone's camera</p>
+            <button class="qr-card__site">getwarden.app</button>
+          </div>
           <button class="btn btn--block btn--google"><span class="glyph-g">G</span><span>Use another account</span></button>
-          <button class="btn btn--block btn--outline"><svg class="ico"><use href="#i-phone"/></svg><span>Get Warden for your phone</span></button>
         </div>
       </div>
     </div>
@@ -411,7 +421,7 @@
 <p>Same pill, top centre of the screen. Warden lives in the tray.</p>
 <div class="grid">
   <figure>
-    <div class="desk desk--win" style="height:560px">
+    <div class="desk desk--win" style="height:760px">
       <div class="win center" style="width:380px">
         <div class="win__bar"><span class="win__name">Warden</span><span class="win__ctrls"><i>—</i><i>☐</i><i>✕</i></span></div>
         <div class="panel sign-in">
@@ -421,7 +431,12 @@
           <button class="btn btn--block btn--google"><span class="glyph-g">G</span><span>Continue with Google</span></button>
           <button class="btn btn--block btn--apple"><svg class="ico"><use href="#i-apple"/></svg><span>Continue with Apple</span></button>
           <button class="btn btn--block btn--outline"><svg class="ico"><use href="#i-mail"/></svg><span>Email me a code</span></button>
-          <p class="panel__foot"><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-phone"/></svg> No account? Get Warden on your phone first.</p>
+          <p class="panel__foot">No account? <button class="link" data-action="toggle-qr" aria-expanded="true"><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-qr"/></svg> Get Warden on your phone</button></p>
+          <div class="qr-card">
+            <img class="qr-card__code" src="../shared/get-warden-qr.svg" alt="QR code for getwarden.app">
+            <p class="qr-card__hint">Scan with your phone's camera</p>
+            <button class="qr-card__site">getwarden.app</button>
+          </div>
         </div>
       </div>
       <div class="taskbar"><span class="taskbar__btn taskbar__start"><svg class="ico"><use href="#i-win"/></svg></span><span class="taskbar__btn"><svg class="ico"><use href="#i-search"/></svg></span><span class="taskbar__tray"><span class="taskbar__clock">9:41<br>17-10-2026</span></span></div>
@@ -429,15 +444,19 @@
     <figcaption><b>Sign in</b></figcaption>
   </figure>
   <figure>
-    <div class="desk desk--win" style="height:560px">
+    <div class="desk desk--win" style="height:760px">
       <div class="win center" style="width:380px">
         <div class="win__bar"><span class="win__name">Warden</span><span class="win__ctrls"><i>—</i><i>☐</i><i>✕</i></span></div>
         <div class="panel sign-in">
           <img class="moa panel__moa" src="../shared/mochi/worried.webp" alt="MOA">
           <h1 class="panel__title" style="overflow-wrap:anywhere">No Warden account for sam@gmail.com</h1>
           <p class="panel__lead">Set up Warden on your phone first. Then sign in here with the same Google account.</p>
+          <div class="qr-card">
+            <img class="qr-card__code" src="../shared/get-warden-qr.svg" alt="QR code for getwarden.app">
+            <p class="qr-card__hint">Scan with your phone's camera</p>
+            <button class="qr-card__site">getwarden.app</button>
+          </div>
           <button class="btn btn--block btn--google"><span class="glyph-g">G</span><span>Use another account</span></button>
-          <button class="btn btn--block btn--outline"><svg class="ico"><use href="#i-phone"/></svg><span>Get Warden for your phone</span></button>
         </div>
       </div>
       <div class="taskbar"><span class="taskbar__btn taskbar__start"><svg class="ico"><use href="#i-win"/></svg></span><span class="taskbar__btn"><svg class="ico"><use href="#i-search"/></svg></span><span class="taskbar__tray"><span class="taskbar__clock">9:41<br>17-10-2026</span></span></div>
