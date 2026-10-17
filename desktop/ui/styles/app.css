@@ -1,0 +1,44 @@
+/* Window-level layout for the real app (the mockups drew fake OS frames around the same parts). */
+
+html, body { margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+body { background: var(--surface); overflow: hidden; user-select: none; -webkit-user-select: none; cursor: default; }
+input { user-select: text; -webkit-user-select: text; }
+button:focus-visible, .link:focus-visible { outline: 2px solid var(--pri); outline-offset: 2px; }
+button:disabled { opacity: .55; cursor: default; }
+button:disabled:active { transform: none; }
+
+/* ---------- Sign-in / linked window ---------- */
+.form-error { margin: 12px 0 0; font: 700 13.5px/1.35 var(--f); color: var(--coral); }
+.panel .field { margin-bottom: 12px; }
+.panel__back { margin-top: 14px; }
+
+/* The code boxes are a picture of one real input that sits invisibly on top, so paste,
+   autofill ("one-time-code") and backspace all work like a normal text field. */
+.code-entry { position: relative; width: max-content; margin: 0 auto; }
+.code-entry .code-boxes { pointer-events: none; }
+.code-entry input {
+  position: absolute; inset: 0; width: 100%; height: 52px; opacity: 0; border: 0; padding: 0;
+  font-size: 22px; letter-spacing: 40px; color: transparent; caret-color: transparent; background: none;
+}
+.code-boxes span.is-active { border-color: var(--outline2); box-shadow: none; }
+.code-entry input:focus + .code-boxes span.is-active { border-color: var(--pri); box-shadow: 0 0 0 3px var(--pri-c); }
+
+/* Browsers in the linked window */
+.app-icon--img { background: transparent; box-shadow: none; }
+.app-icon img { width: 100%; height: 100%; display: block; }
+.linked__empty { font: 600 13.5px/1.35 var(--f); color: var(--ink2); margin: 0 0 12px; }
+.panel--left .btn--block { margin-top: 14px; }
+.panel--left .panel__foot { text-align: center; }
+
+/* ---------- Popover window ---------- */
+/* The window itself is transparent; the panel draws the rounded card. The OS draws the shadow. */
+body.popover-window { background: transparent; }
+.popover-window .popover { position: static; width: 100%; box-shadow: none; }
+.popover__face { display: contents; }
+.popover__offline { color: var(--amber); }
+.popover__empty { font: 600 13.5px/1.3 var(--f); color: var(--ink2); margin: 0; }
+.popover__signed-out { text-align: center; padding: 8px 4px 4px; }
+.popover__signed-out .moa { width: 84px; height: 84px; margin: 0 auto 8px; }
+.popover__signed-out p { font: 650 14px/1.4 var(--f); color: var(--ink2); margin: 0 0 14px; }
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }

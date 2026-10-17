@@ -1,0 +1,224 @@
+/* Warden desktop UI components, ported from mockups/desktop/ui.css (approved 2026-10-17).
+   Uses ../shared/tokens.css. Dark first, light via [data-theme="light"].
+   Alignment fixes vs the mockup are marked "fix:". */
+
+.wd { font-family: var(--f); color: var(--ink); -webkit-font-smoothing: antialiased; }
+.wd *, .wd *::before, .wd *::after { box-sizing: border-box; }
+.ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ico--fill { fill: currentColor; stroke: none; }
+.moa { display: block; object-fit: contain; }
+
+/* Buttons */
+.btn {
+  height: 44px; padding: 0 18px; border-radius: 22px; border: 1.5px solid transparent;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: 750 15px/1 var(--f); color: var(--ink); background: transparent; cursor: pointer; white-space: nowrap;
+  transition: transform .1s var(--e), background-color .18s, border-color .18s;
+}
+.btn:active { transform: scale(.97); }
+.btn--block { width: 100%; }
+.btn--primary { background: var(--mint-f); color: #04301E; }
+.btn--primary:hover { background: var(--mint-f2); }
+.btn--outline { border-color: var(--outline); }
+.btn--outline:hover { background: var(--s2); }
+.btn--stop { background: var(--coral-f); color: #2B0A02; }
+.btn--danger { border-color: var(--coral); color: var(--coral); }
+.btn--danger:hover { background: var(--coral-c); }
+.btn--sm { height: 32px; padding: 0 12px; font-size: 13.5px; border-radius: 16px; }
+/* fix: icon + text centred on one line instead of a vertical-align nudge */
+.link { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: 750 14px/1.2 var(--f); color: var(--pri-ink); cursor: pointer; }
+.link .ico { width: 14px; height: 14px; }
+/* Small icon inside a line of text (footers, hints): centred on the text, not nudged. */
+.inline-ico { display: inline-flex; align-items: center; gap: 6px; }
+.inline-ico .ico { width: 14px; height: 14px; }
+
+/* Status chips (browser / extension state) */
+.status { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: 13px; font: 800 12.5px/1 var(--f); white-space: nowrap; }
+.status .ico { width: 14px; height: 14px; stroke-width: 2.6; }
+.status--ok { background: var(--mint-c); color: var(--mint); }
+.status--warn { background: var(--amber-c); color: var(--amber); }
+
+/* App icon: coloured rounded square with a glyph (no real logos) */
+.app-icon {
+  --c: #555; width: 32px; height: 32px; border-radius: 9px; background: var(--c); color: #fff; flex: none;
+  display: inline-grid; place-items: center; font: 800 15px/1 var(--f);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.app-icon--sm { width: 20px; height: 20px; border-radius: 6px; font-size: 11px; }
+.app-icon--xs { width: 18px; height: 18px; border-radius: 5px; font-size: 10px; }
+
+/* Toggle switch */
+.toggle { position: relative; width: 46px; height: 28px; flex: none; }
+.toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.toggle span { position: absolute; inset: 0; border-radius: 14px; background: var(--s3); border: 1.5px solid var(--outline2); transition: background-color .18s, border-color .18s; }
+.toggle span::after { content: ""; position: absolute; top: 4px; left: 4px; width: 17px; height: 17px; border-radius: 50%; background: var(--ink3); transition: transform .2s var(--spring), background-color .18s; }
+.toggle input:checked + span { background: var(--mint-f); border-color: var(--mint-f); }
+.toggle input:checked + span::after { transform: translateX(18px); background: #04301E; }
+.toggle input:focus-visible + span { outline: 2px solid var(--pri); outline-offset: 2px; }
+
+/* Battery bar */
+.battery { height: 10px; border-radius: 5px; background: var(--ring-track); overflow: hidden; }
+.battery__fill { height: 100%; border-radius: inherit; background: var(--mint-f); width: var(--level, 50%); transition: width .4s var(--e); }
+.battery--low .battery__fill { background: var(--amber-f); }
+.battery--zero .battery__fill { background: var(--coral-f); }
+
+/* Generic rows inside panels */
+.row { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.row__text { flex: 1; min-width: 0; }
+.row__title { font: 750 15px/1.25 var(--f); }
+.row__sub { font: 600 13px/1.3 var(--f); color: var(--ink2); }
+.section-label { font: 800 12px/1 var(--f); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); margin: 0 0 8px; }
+
+/* ---------- Windows of the Warden app (sign in, linked) ---------- */
+.panel { background: var(--surface); color: var(--ink); padding: 26px 28px 24px; text-align: center; }
+.panel__moa { width: 92px; height: 92px; margin: 0 auto 10px; }
+.panel__title { font: 800 23px/1.15 var(--f); margin: 0 0 6px; }
+.panel__lead { font: 600 15px/1.35 var(--f); color: var(--ink2); margin: 0 0 18px; }
+.panel__foot { font: 600 13.5px/1.35 var(--f); color: var(--ink2); margin: 16px 0 0; }
+.panel__foot.inline-ico { display: flex; justify-content: center; }
+.panel .btn + .btn { margin-top: 10px; }
+.panel--left { text-align: left; }
+
+.sign-in .btn { justify-content: flex-start; padding-left: 18px; }
+.sign-in .btn .ico, .sign-in .btn .glyph { width: 20px; height: 20px; }
+/* fix: the label is centred on the button; the icon column (20px + 8px gap) is mirrored on the right */
+.sign-in .btn > span:last-child { flex: 1; text-align: center; margin-right: 28px; }
+.btn--google { background: #fff; color: #1F1F1F; border-color: #DADCE0; }
+.btn--apple { background: var(--ink); color: var(--bg); }
+.glyph-g { font: 900 18px/1 var(--f); color: #4285F4; width: 20px; text-align: center; flex: none; }
+
+.code-boxes { display: flex; gap: 8px; justify-content: center; margin: 4px 0 16px; }
+.code-boxes span { width: 42px; height: 52px; border-radius: 12px; border: 1.5px solid var(--outline2); background: var(--s1); display: grid; place-items: center; font: 800 22px var(--f); }
+.code-boxes span.is-active { border-color: var(--pri); box-shadow: 0 0 0 3px var(--pri-c); }
+
+.field { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border-radius: 22px; background: var(--s1); border: 1.5px solid var(--outline); font: 600 15px var(--f); color: var(--ink); }
+.field input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: inherit; }
+.field input::placeholder { color: var(--ink3); }
+.field .ico { color: var(--ink2); }
+
+.linked__head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.linked__head .moa { width: 64px; height: 64px; flex: none; }
+.linked__head .panel__title { margin: 0; }
+.linked__head .row__sub { margin: 2px 0 0; }
+.linked__device .ico { width: 22px; height: 22px; }
+.linked__device { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--s1); margin-bottom: 14px; }
+.linked__list { list-style: none; margin: 0 0 6px; padding: 0; }
+.linked__list li { display: flex; align-items: center; gap: 12px; min-height: 46px; border-top: 1px solid var(--line); }
+.linked__list li:first-child { border-top: 0; }
+.note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: var(--amber-c); color: var(--ink); font: 650 13.5px/1.35 var(--f); text-align: left; }
+.note { margin: 0; }
+.note .ico { color: var(--amber); margin-top: 0; }
+
+/* ---------- Drain pill (black in both themes: merges with the notch) ---------- */
+.pill {
+  --pill-ink: #F4EFF6; --pill-dim: #C9C1CE; --pill-accent: #74E5B4;
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 30;
+  display: grid; grid-template-columns: auto var(--notch-w, 160px) auto; align-items: center;
+  min-height: var(--bar-h, 30px); background: #000; color: var(--pill-ink);
+  border-radius: 0 0 14px 14px; font-family: var(--f); cursor: pointer;
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,.6);
+  transition: border-radius .25s var(--e);
+}
+.pill__lead, .pill__pts { height: var(--bar-h, 30px); display: flex; align-items: center; }
+.pill__lead { padding: 0 6px 0 12px; justify-content: flex-start; }
+.pill__pts { padding: 0 14px 0 6px; font: 800 14px/1 var(--f); font-variant-numeric: tabular-nums; color: var(--pill-accent); white-space: nowrap; }
+.pill__lead .moa { width: 20px; height: 20px; }
+.pill__lead .ico { color: var(--pill-accent); }
+.pill__panel { display: none; grid-column: 1 / -1; padding: 6px 16px 16px; width: 340px; }
+.pill.is-open { border-radius: 0 0 24px 24px; }
+.pill.is-open .pill__panel { display: block; }
+.pill__title { display: flex; align-items: center; gap: 10px; font: 800 16px/1.2 var(--f); margin: 4px 0 2px; }
+.pill__sub { font: 650 13.5px/1.35 var(--f); color: var(--pill-dim); margin: 0 0 12px; }
+.pill .battery { background: rgba(255,255,255,.14); margin-bottom: 14px; }
+.pill__actions { display: flex; gap: 8px; }
+.pill__actions .btn { flex: 1; height: 40px; }
+.pill .btn--outline { border-color: #5E5765; color: var(--pill-ink); }
+.pill .btn--outline:hover { background: #2A262F; }
+.pill__hint { font: 600 12px/1.3 var(--f); color: var(--pill-dim); margin: 8px 0 0; text-align: center; }
+
+.pill--hidden .pill__lead, .pill--hidden .pill__pts, .pill--hidden .pill__panel { visibility: hidden; width: 0; padding: 0; }
+.pill--hidden { box-shadow: none; cursor: default; }
+.pill--low { --pill-accent: #FFCB6B; }
+.pill--low .pill__sub { color: #FFCB6B; }
+.pill--zero { --pill-accent: #FF9C86; }
+.pill--noext .pill__sub { color: #FFCB6B; }
+
+/* ---------- Popover / tray flyout ---------- */
+.popover {
+  position: absolute; z-index: 40; width: 330px; padding: 16px; border-radius: 20px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  box-shadow: 0 2px 4px rgba(0,0,0,.08), 0 30px 60px -20px var(--shadow);
+}
+.popover__head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.popover__head .moa { width: 64px; height: 64px; flex: none; }
+.popover__bal { font: 800 38px/1 var(--fm); font-variant-numeric: tabular-nums; }
+.popover__bal small { font: 800 16px var(--f); color: var(--ink2); margin-left: 4px; }
+.popover__state { font: 700 13px/1.2 var(--f); color: var(--ink2); margin-top: 4px; }
+.popover .battery { margin-bottom: 12px; }
+.popover__now { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--coral-c); font: 750 14px/1.25 var(--f); margin-bottom: 6px; }
+.popover__now b { margin-left: auto; color: var(--coral); font-weight: 800; }
+.popover__now--idle { background: var(--s1); color: var(--ink2); }
+.popover__sec { padding: 10px 0; border-top: 1px solid var(--line); }
+.popover__sec:first-of-type { border-top: 0; }
+.popover__sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.popover__sec-head .section-label { margin: 0; }
+.icon-strip { display: flex; gap: 6px; flex-wrap: wrap; }
+/* fix: the "Set on your phone" hint sits under the sites title instead of squeezing it onto two lines */
+.popover__sites { min-height: 30px; }
+.popover__sites > .ico { color: var(--pri-ink); }
+.popover__sites .row__title, .popover__sites .row__sub { display: flex; }
+.popover__browsers { display: grid; gap: 6px; }
+.popover__browsers .row { min-height: 30px; gap: 10px; font: 700 14px/1.2 var(--f); }
+.popover__crew { display: flex; align-items: center; gap: 10px; font: 650 13.5px/1.3 var(--f); color: var(--ink2); }
+.avatars { display: flex; }
+.avatars span { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--f); color: #1D1A1F; border: 2px solid var(--surface); margin-left: -6px; }
+.avatars span:first-child { margin-left: 0; }
+.popover__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); font: 600 13px var(--f); color: var(--ink2); }
+/* fix: a long email truncates instead of pushing Quit out of the panel */
+.popover__foot > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.popover__foot .btn { flex: none; }
+.popover__foot .btn { height: 34px; }
+
+/* ---------- App picker ---------- */
+.picker { width: 420px; background: var(--surface); color: var(--ink); padding: 16px 18px 18px; text-align: left; }
+.picker__title { font: 800 20px/1.2 var(--f); margin: 0 0 2px; }
+.picker__lead { font: 600 13.5px var(--f); color: var(--ink2); margin: 0 0 12px; }
+.picker .field { margin-bottom: 12px; }
+.picker__list { list-style: none; margin: 0 0 12px; padding: 0; max-height: 260px; overflow: auto; }
+.app-row { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--line); font: 700 15px var(--f); }
+.app-row:first-child { border-top: 0; }
+.app-row__name { flex: 1; }
+.picker__group { margin: 10px 0 4px; }
+.picker__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; font: 600 13px/1.3 var(--f); color: var(--ink2); }
+
+/* ---------- Quit confirm ---------- */
+.confirm { width: 360px; background: var(--surface); color: var(--ink); padding: 22px 24px; border-radius: 22px; text-align: center; box-shadow: 0 30px 60px -20px var(--shadow); border: 1px solid var(--line); }
+.confirm .moa { width: 84px; height: 84px; margin: 0 auto 8px; }
+.confirm h3 { font: 800 21px/1.2 var(--f); margin: 0 0 6px; }
+.confirm p { font: 600 14.5px/1.4 var(--f); color: var(--ink2); margin: 0 0 16px; }
+.confirm .avatars { justify-content: center; margin-bottom: 14px; }
+.confirm .btn + .btn { margin-top: 8px; }
+
+/* ---------- Shield (full screen over the blocked app) ---------- */
+.shield {
+  position: absolute; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center;
+  background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(18px) saturate(.8); -webkit-backdrop-filter: blur(18px) saturate(.8);
+  color: var(--ink);
+}
+.shield__card { width: 380px; }
+.shield .moa { width: 132px; height: 132px; margin: 0 auto 10px; }
+.shield h2 { font: 800 34px/1.1 var(--fm); margin: 0 0 8px; }
+.shield p { font: 650 16px/1.4 var(--f); color: var(--ink2); margin: 0 0 20px; }
+.shield .btn { min-width: 200px; }
+.shield__earn { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px !important; font-size: 14px !important; color: var(--ink2); }
+.shield__earn .ico { color: var(--mint); }
+
+/* ---------- Low battery toast (one time, at 10 pts) ---------- */
+.toast {
+  position: absolute; z-index: 45; width: 330px; display: flex; gap: 12px; align-items: center; padding: 12px 14px;
+  border-radius: 18px; background: var(--surface); border: 1.5px solid var(--amber-f); color: var(--ink);
+  box-shadow: 0 24px 48px -20px var(--shadow);
+}
+.toast .moa { width: 48px; height: 48px; }
+.toast__title { font: 800 15px/1.2 var(--f); color: var(--amber); }
+.toast__text { font: 650 13.5px/1.3 var(--f); color: var(--ink2); }

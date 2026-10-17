@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./shared/tokens.css">
+<link rel="stylesheet" href="./styles/ui.css">
+<link rel="stylesheet" href="./styles/app.css">
+<title>Warden</title>
+</head>
+<body class="wd window">
+<svg class="sprite" aria-hidden="true">
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+    <symbol id="i-apple" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.1-1.2 2.9-2.4.9-1.3 1.3-2.7 1.3-2.7s-2.4-1-2.4-4zM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z"/></symbol>
+    <symbol id="i-win" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><rect x="3" y="3" width="8.5" height="8.5" rx="1"/><rect x="12.5" y="3" width="8.5" height="8.5" rx="1"/><rect x="3" y="12.5" width="8.5" height="8.5" rx="1"/><rect x="12.5" y="12.5" width="8.5" height="8.5" rx="1"/></g></symbol>
+</svg>
+
+<main class="panel sign-in" id="content">
+  <!-- Step 1: choose how to sign in. Apple is hidden until it is configured on the server. -->
+  <section id="view-start">
+    <img class="moa panel__moa" src="/mochi/happy.webp" alt="MOA">
+    <h1 class="panel__title">Sign in to Warden</h1>
+    <p class="panel__lead">Use the account from your phone.</p>
+    <button class="btn btn--block btn--google" id="google"><span class="glyph-g">G</span><span>Continue with Google</span></button>
+    <button class="btn btn--block btn--outline" id="use-email"><svg class="ico"><use href="#i-mail"/></svg><span>Email me a code</span></button>
+    <p class="form-error" id="start-error" role="alert" hidden></p>
+    <p class="panel__foot inline-ico"><svg class="ico"><use href="#i-phone"/></svg>No account? Get Warden on your phone first.</p>
+  </section>
+
+  <!-- Step 2: which email -->
+  <form id="view-email" hidden>
+    <img class="moa panel__moa" src="/mochi/happy.webp" alt="MOA">
+    <h1 class="panel__title">Sign in with email</h1>
+    <p class="panel__lead">We'll email you a 6-digit code.</p>
+    <label class="field"><svg class="ico"><use href="#i-mail"/></svg><input id="email" type="email" autocomplete="email" placeholder="you@example.com" aria-label="Email" required></label>
+    <button class="btn btn--block btn--primary" id="send-code" type="submit">Email me a code</button>
+    <p class="form-error" id="email-error" role="alert" hidden></p>
+    <p class="panel__foot"><button class="link" type="button" data-back>Back</button></p>
+  </form>
+
+  <!-- Step 3: the code -->
+  <form id="view-code" hidden>
+    <img class="moa panel__moa" src="/mochi/wink.webp" alt="MOA">
+    <h1 class="panel__title">Check your email</h1>
+    <p class="panel__lead">Type the code we sent to <span id="sent-to"></span></p>
+    <div class="code-entry">
+      <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="6-digit code">
+      <div class="code-boxes" id="code-boxes"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+    <button class="btn btn--block btn--primary" id="verify" type="submit">Sign in</button>
+    <p class="form-error" id="code-error" role="alert" hidden></p>
+    <p class="panel__foot"><button class="link" type="button" id="resend">Send a new code</button></p>
+  </form>
+</main>
+
+<script type="module" src="./src/signin.ts"></script>
+</body>
+</html>

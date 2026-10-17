@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./shared/tokens.css">
+<link rel="stylesheet" href="./styles/ui.css">
+<link rel="stylesheet" href="./styles/app.css">
+<title>Warden</title>
+</head>
+<body class="wd popover-window">
+<svg class="sprite" aria-hidden="true">
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+    <symbol id="i-apple" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.1-1.2 2.9-2.4.9-1.3 1.3-2.7 1.3-2.7s-2.4-1-2.4-4zM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z"/></symbol>
+    <symbol id="i-win" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><rect x="3" y="3" width="8.5" height="8.5" rx="1"/><rect x="12.5" y="3" width="8.5" height="8.5" rx="1"/><rect x="3" y="12.5" width="8.5" height="8.5" rx="1"/><rect x="12.5" y="12.5" width="8.5" height="8.5" rx="1"/></g></symbol>
+</svg>
+
+<section class="popover" id="content" aria-label="Warden">
+  <div id="signed-in" hidden>
+    <div class="popover__head">
+      <img class="moa" id="face" src="/mochi/idle.webp" alt="MOA">
+      <div>
+        <div class="popover__bal"><span id="balance">0</span><small>pts</small></div>
+        <div class="popover__state"><span id="mood"></span> <span class="popover__offline" id="offline" hidden>· Offline</span></div>
+      </div>
+    </div>
+    <div class="battery" id="battery"><div class="battery__fill" id="battery-fill"></div></div>
+    <div class="popover__now popover__now--idle" id="now">Nothing draining</div>
+
+    <div class="popover__sec">
+      <div class="popover__sec-head"><h2 class="section-label">Guarded on this <span data-computer>Mac</span></h2></div>
+      <div class="icon-strip" id="guarded-apps"></div>
+      <p class="popover__empty" id="no-apps" hidden>No apps guarded yet.</p>
+    </div>
+    <div class="popover__sec">
+      <div class="row popover__sites"><svg class="ico"><use href="#i-globe"/></svg><span class="row__text"><span class="row__title" id="sites"></span><span class="row__sub inline-ico"><svg class="ico"><use href="#i-phone"/></svg>Set on your phone</span></span></div>
+    </div>
+    <div class="popover__sec popover__browsers" id="browsers"></div>
+    <div class="popover__sec popover__crew" id="crew" hidden>
+      <span class="avatars" id="avatars"></span>
+      <span id="crew-text"></span>
+    </div>
+    <div class="popover__foot"><span id="email"></span><button class="btn btn--sm btn--danger" id="quit"><svg class="ico"><use href="#i-power"/></svg>Quit Warden</button></div>
+  </div>
+
+  <div class="popover__signed-out" id="signed-out" hidden>
+    <img class="moa" src="/mochi/sleepy.webp" alt="MOA">
+    <h1 class="panel__title">Signed out</h1>
+    <p>Sign in with the account from your phone. Nothing drains until you do.</p>
+    <button class="btn btn--block btn--primary" id="sign-in">Sign in</button>
+  </div>
+</section>
+
+<script type="module" src="./src/popover.ts"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+/* Warden tokens. Source: warden-web/apps/web/public/assets/site.css (= designs/v5/b = Android ui/theme/Colors.kt). Dark first; light via [data-theme="light"]. */
+@font-face{font-family:Figtree;font-weight:300 900;font-display:swap;src:url(fonts/figtree.ttf) format("truetype")}
+@font-face{font-family:Quicksand;font-weight:300 700;font-display:swap;src:url(fonts/quicksand.ttf) format("truetype")}
+
+/* tokens = designs/v5/b :root = apps/android/design .../ui/theme/Colors.kt. Dark first. */
+:root{
+  --f:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;--fm:"Quicksand","Figtree",system-ui,sans-serif;
+  --e:cubic-bezier(.2,0,0,1);--e-out:cubic-bezier(.05,.7,.1,1);--e-in:cubic-bezier(.3,0,.8,.15);--spring:cubic-bezier(.34,1.32,.5,1);
+  --bg:#121014;--surface:#1C1920;--s1:#211E25;--s2:#2A262F;--s3:#35303A;
+  --line:rgba(255,255,255,.08);--outline:#4A4450;--outline2:#5E5765;
+  --ink:#F4EFF6;--ink2:#D0C7D4;--ink3:#A79EAC;
+  --pri:#8EEBFF;--on-pri:#00303A;--pri-c:#0D4A55;--on-pri-c:#CFF6FF;--pri-ink:#8EEBFF;
+  --hdr:#1B181E;--cookie:#103F49;--bub:#26222B;--bub-line:rgba(255,255,255,.06);
+  --mint:#74E5B4;--mint-c:rgba(116,229,180,.14);--mint-f:#3DDC97;--mint-f2:#9DF0CB;
+  --coral:#FF9C86;--coral-c:rgba(255,124,96,.16);--coral-f:#FF7A5C;
+  --amber:#FFCB6B;--amber-c:rgba(255,190,80,.15);--amber-f:#FFB938;
+  --shadow:rgba(0,0,0,.6);--ring-track:rgba(255,255,255,.10);--glow-a:.5;--glow-c:#8EEBFF;--cyan:#8EEBFF;
+  --moa-eye:#8EEBFF;--moa-blush:#A8456B;--moa-ring:#3DDC97;--moa-ring-track:rgba(142,235,255,.12);
+  --moa-fly-bg:#3DDC97;--moa-fly-ink:#04301E;--moa-font:var(--fm);
+  --moa-say-bg:#26222B;--moa-say-ink:#F4EFF6;--moa-say-border:rgba(255,255,255,.08);
+  color-scheme:dark;
+}
+[data-theme="light"]{
+  --bg:#FBF8F4;--surface:#FFFFFF;--s1:#F5F0EA;--s2:#EDE7E0;--s3:#E2DBD3;
+  --line:rgba(45,32,25,.10);--outline:#CFC6BE;--outline2:#B9AFA6;
+  --ink:#1D1A1F;--ink2:#4A4350;--ink3:#655D6B;
+  --pri:#08697A;--on-pri:#FFFFFF;--pri-c:#C9F1F9;--on-pri-c:#003842;--pri-ink:#07606F;
+  --hdr:#F1EAE1;--cookie:#B4E8F4;--bub:#FFFFFF;--bub-line:rgba(45,32,25,.09);
+  --mint:#0B7148;--mint-c:#D2F3E2;--mint-f:#22C483;--mint-f2:#7BE3B6;
+  --coral:#AE3520;--coral-c:#FFE2DA;--coral-f:#FF6F50;
+  --amber:#7E5300;--amber-c:#FFEBC1;--amber-f:#F5A623;
+  --shadow:rgba(60,40,20,.28);--ring-track:rgba(29,26,31,.10);--glow-a:.4;
+  --moa-say-bg:#fff;--moa-say-ink:#1D1A1F;--moa-say-border:rgba(45,32,25,.09);
+  color-scheme:light;
+}
