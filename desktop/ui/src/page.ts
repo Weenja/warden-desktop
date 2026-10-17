@@ -75,3 +75,43 @@ export function appTile(name: string, iconUrl: string | null, size: "" | "sm" = 
   tile.append(img);
   return tile;
 }
+
+/** Same low threshold as the phone and the drain pill: 10 points or less. */
+export const LOW_POINTS = 10;
+
+/** Whole points (1 point = 1 minute), never below 0. */
+export function points(seconds: number | null | undefined): number {
+  return Math.max(0, Math.floor((seconds ?? 0) / 60));
+}
+
+/** Battery fill in percent: the balance against the crew's daily max. */
+export function batteryLevel(balanceSeconds: number | null, dailyMaxSeconds: number | null): number {
+  const max = points(dailyMaxSeconds);
+  return max > 0 ? Math.min(100, Math.round((points(balanceSeconds) / max) * 100)) : 0;
+}
+
+/** "mint" (no class), "low" or "zero", for the battery and the pill. */
+export function tone(pts: number): "" | "low" | "zero" {
+  return pts === 0 ? "zero" : pts <= LOW_POINTS ? "low" : "";
+}
+
+/** "−1/min", with a real minus sign as in the designs. */
+export function perMinute(n: number): string {
+  return `−${n}/min`;
+}
+
+/** Up to three crew initials in coloured circles. */
+export function crewAvatars(names: string[]): HTMLSpanElement[] {
+  const colours = ["#FFB4A2", "#9DF0CB", "#B5D8FF", "#FFE08A", "#E3C4FF"];
+  return names.slice(0, 3).map((name, i) => {
+    const a = document.createElement("span");
+    a.textContent = (name[0] ?? "?").toUpperCase();
+    a.style.setProperty("background", colours[i % colours.length] ?? "#B5D8FF");
+    return a;
+  });
+}
+
+/** "Emma", "Emma and Jake", "Emma, Jake and Olivia". */
+export function nameList(names: string[]): string {
+  return names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}

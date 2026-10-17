@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./shared/tokens.css">
+<link rel="stylesheet" href="./styles/ui.css">
+<link rel="stylesheet" href="./styles/app.css">
+<title>Warden</title>
+</head>
+<body class="wd window">
+<main class="confirm" id="content" role="alertdialog" aria-labelledby="heading" aria-describedby="lead">
+  <img class="moa" src="/mochi/worried.webp" alt="">
+  <h1 id="heading">Quit Warden?</h1>
+  <p id="lead">Your crew gets told you stopped protection.</p>
+  <div class="avatars" id="avatars"></div>
+  <button class="btn btn--primary btn--block" id="keep">Keep Warden on</button>
+  <button class="btn btn--danger btn--block" id="quit">Quit and tell my crew</button>
+</main>
+
+<script type="module" src="./src/quit.ts"></script>
+</body>
+</html>

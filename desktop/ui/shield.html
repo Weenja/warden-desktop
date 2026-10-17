@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./shared/tokens.css">
+<link rel="stylesheet" href="./styles/ui.css">
+<link rel="stylesheet" href="./styles/app.css">
+<title>Warden</title>
+</head>
+<body class="wd shield-window">
+<svg class="sprite" aria-hidden="true">
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+</svg>
+
+<div class="shield" role="alertdialog" aria-labelledby="heading" aria-describedby="text">
+  <div class="shield__card">
+    <img class="moa" src="/mochi/locked.webp" alt="MOA, locked">
+    <h1 id="heading">that's your lot.</h1>
+    <p id="text"></p>
+    <button class="btn btn--primary" id="close"><svg class="ico"><use href="#i-stop"/></svg><span id="close-label">Close</span></button>
+    <p class="shield__earn"><svg class="ico"><use href="#i-phone"/></svg>Earn on your phone: walk, work out, focus.</p>
+  </div>
+</div>
+
+<script type="module" src="./src/shield.ts"></script>
+</body>
+</html>

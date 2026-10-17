@@ -1,6 +1,8 @@
 /* Window-level layout for the real app (the mockups drew fake OS frames around the same parts). */
 
 html, body { margin: 0; padding: 0; }
+/* Transparent windows (popover, pill, shield, toast) must not get a default page colour. */
+html { background: transparent; }
 [hidden] { display: none !important; }
 body { background: var(--surface); overflow: hidden; user-select: none; -webkit-user-select: none; cursor: default; }
 input { user-select: text; -webkit-user-select: text; }
@@ -42,3 +44,44 @@ body.popover-window { background: transparent; }
 .popover__signed-out .moa { width: 84px; height: 84px; margin: 0 auto 8px; }
 .popover__signed-out p { font: 650 14px/1.4 var(--f); color: var(--ink2); margin: 0 0 14px; }
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.popover__now .ico { width: 18px; height: 18px; color: var(--coral); flex: none; }
+
+/* ---------- Open at login (linked window) ---------- */
+.linked__login { min-height: 40px; margin-bottom: 8px; }
+
+/* ---------- Drain pill window ---------- */
+/* The window is exactly the pill's size and sits on the notch; everything around is the menu bar. */
+body.pill-window { background: transparent; }
+.pill-window .pill {
+  position: static; transform: none; width: max-content; box-shadow: none;
+  /* fix: equal side columns, so the middle column sits exactly under the notch (the window is
+     centred on the notch, the mockup centred the whole pill) */
+  grid-template-columns: minmax(max-content, 1fr) var(--notch-w, 160px) minmax(max-content, 1fr);
+}
+.pill-window .pill__pts { justify-content: flex-end; }
+.pill-window .pill__lead .app-icon { flex: none; }
+.pill-window .pill__title .moa { width: 28px; height: 28px; }
+.pill-window .pill__actions[hidden], .pill-window .pill__hint[hidden] { display: none !important; }
+.pill:focus-visible { outline: none; }
+
+/* ---------- Shield window ---------- */
+body.shield-window { background: transparent; }
+/* fix: a window cannot blur the apps under it, so the shield is opaque (it has to hide the
+   locked app anyway) */
+.shield-window .shield { position: fixed; background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.shield h1 { font: 800 34px/1.1 var(--fm); margin: 0 0 8px; }
+.shield .btn { display: inline-flex; }
+
+/* ---------- Low battery toast window ---------- */
+body.toast-window { background: transparent; }
+.toast-window .toast { position: static; width: 100%; box-shadow: none; cursor: default; }
+.toast-window .toast__text { text-wrap: pretty; }
+
+/* ---------- Picker and quit windows (normal windows: no card frame) ---------- */
+.window .picker { width: auto; }
+.picker__list { max-height: 340px; }
+.picker__note { font: 600 13.5px/1.35 var(--f); color: var(--ink2); padding: 14px 0; }
+.picker .field input[type="search"] { -webkit-appearance: none; appearance: none; }
+.picker .form-error { margin: 0 0 10px; }
+.window .confirm { width: auto; border: 0; border-radius: 0; box-shadow: none; }
+.confirm h1 { font: 800 21px/1.2 var(--f); margin: 0 0 6px; }

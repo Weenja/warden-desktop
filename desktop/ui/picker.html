@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./shared/tokens.css">
+<link rel="stylesheet" href="./styles/ui.css">
+<link rel="stylesheet" href="./styles/app.css">
+<title>Warden</title>
+</head>
+<body class="wd window">
+<svg class="sprite" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+</svg>
+
+<main class="picker" id="content">
+  <h1 class="picker__title">Guarded apps on this <span data-computer>Mac</span></h1>
+  <p class="picker__lead">These drain points while they're open.</p>
+  <label class="field"><svg class="ico"><use href="#i-search"/></svg><input id="search" type="search" placeholder="Search apps" autocomplete="off" spellcheck="false" aria-label="Search apps"></label>
+  <ul class="picker__list" id="list"><li class="picker__note">Looking for apps…</li></ul>
+  <p class="form-error" id="error" hidden></p>
+  <div class="picker__foot"><span class="inline-ico"><svg class="ico"><use href="#i-phone"/></svg>Sites are set on your phone.</span><button class="btn btn--primary btn--sm" id="done">Done</button></div>
+</main>
+
+<script type="module" src="./src/picker.ts"></script>
+</body>
+</html>

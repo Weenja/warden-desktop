@@ -4,8 +4,25 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export interface GuardedItem { token: string; label: string }
+export interface GuardedAppView { token: string; label: string; icon: string | null }
 export interface LinkedDevice { id: string; name: string }
 export interface Browser { id: string; name: string; icon: string | null }
+export type DrainKind = "app" | "browser";
+/** Mirrors `guard::DrainView`: what the pill shows. */
+export interface DrainView {
+  app_id: string;
+  label: string;
+  kind: DrainKind;
+  icon: string | null;
+  balance_seconds: number;
+  per_minute: number;
+  low: boolean;
+  locked: boolean;
+}
+/** Mirrors `guard::ShieldView`. */
+export interface ShieldView { app_id: string; label: string; kind: DrainKind; reason: "zero" | "offline" | "daily_max" }
+export interface PickerApp { id: string; name: string; icon: string | null; guarded: boolean; common: boolean }
+export interface PillMetrics { notch_width: number; bar_height: number }
 
 /** Mirrors `sync::UiState` in Rust. */
 export interface UiState {
@@ -15,11 +32,13 @@ export interface UiState {
   balance_seconds: number | null;
   daily_max_seconds: number | null;
   low_balance: boolean;
-  guarded_apps: GuardedItem[];
+  guarded_apps: GuardedAppView[];
   guarded_sites: number;
   crew: string[];
   browsers: Browser[];
   online: boolean;
+  drain: DrainView | null;
+  shield: ShieldView | null;
 }
 
 export interface AuthResult { ok: boolean; message: string | null }
@@ -33,7 +52,19 @@ export const core = {
   openSignin: () => invoke<void>("open_signin"),
   closeSignin: () => invoke<void>("close_signin"),
   quitWarden: () => invoke<void>("quit_warden"),
+  pillFit: (width: number, height: number) => invoke<void>("pill_fit", { width, height }),
+  pillMetrics: () => invoke<PillMetrics>("pill_metrics"),
+  stopDraining: () => invoke<void>("stop_draining"),
+  closeLockedApp: () => invoke<void>("close_locked_app"),
+  listApps: () => invoke<PickerApp[]>("list_apps"),
+  saveGuardedApps: (items: GuardedItem[]) => invoke<void>("save_guarded_apps", { items }),
+  openPicker: () => invoke<void>("open_picker"),
+  openQuit: () => invoke<void>("open_quit"),
+  closeWindow: () => invoke<void>("close_window"),
+  getAutostart: () => invoke<boolean>("get_autostart"),
+  setAutostart: (on: boolean) => invoke<boolean>("set_autostart", { on }),
   onState: (fn: (s: UiState) => void): Promise<UnlistenFn> => listen<UiState>("state-changed", (e) => fn(e.payload)),
+  onPillHover: (fn: (inside: boolean) => void): Promise<UnlistenFn> => listen<boolean>("pill-hover", (e) => fn(e.payload)),
   onAuthResult: (fn: (r: AuthResult) => void): Promise<UnlistenFn> => listen<AuthResult>("auth-result", (e) => fn(e.payload)),
 };
 

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./shared/tokens.css">
+<link rel="stylesheet" href="./styles/ui.css">
+<link rel="stylesheet" href="./styles/app.css">
+<title>Warden</title>
+</head>
+<body class="wd pill-window">
+<svg class="sprite" aria-hidden="true">
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor"/></symbol>
+</svg>
+
+<div class="pill" id="pill" role="button" tabindex="0" aria-label="What drains now">
+  <span class="pill__lead" id="lead"></span><span aria-hidden="true"></span><span class="pill__pts" id="pts"></span>
+  <div class="pill__panel">
+    <p class="pill__title" id="title"></p>
+    <p class="pill__sub" id="sub"></p>
+    <div class="battery" id="battery"><div class="battery__fill" id="battery-fill"></div></div>
+    <div class="pill__actions" id="actions"><button class="btn btn--stop" id="stop"><svg class="ico"><use href="#i-stop"/></svg>Stop</button></div>
+    <p class="pill__hint" id="hint"></p>
+  </div>
+</div>
+
+<script type="module" src="./src/pill.ts"></script>
+</body>
+</html>

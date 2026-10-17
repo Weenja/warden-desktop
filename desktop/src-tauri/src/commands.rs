@@ -74,7 +74,7 @@ pub async fn verify_email_code(
 /// so the window never shows scroll bars or empty space.
 #[tauri::command]
 pub fn fit_window(window: WebviewWindow, height: f64) -> Result<(), String> {
-    let height = height.clamp(120.0, 900.0);
+    let height = height.clamp(60.0, 900.0);
     let width =
         window.inner_size().map_err(|e| e.to_string())?.to_logical::<f64>(window.scale_factor().unwrap_or(1.0)).width;
     window.set_size(LogicalSize::new(width, height)).map_err(|e| e.to_string())
