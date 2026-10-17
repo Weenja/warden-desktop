@@ -1,0 +1,52 @@
+[package]
+name = "warden-desktop"
+version = "0.1.0"
+description = "Warden for Mac and Windows: guarded apps drain the points you earn on your phone."
+license = "AGPL-3.0-only"
+edition = "2021"
+rust-version = "1.90"
+
+[lib]
+name = "warden_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png", "macos-private-api"] }
+tauri-plugin-deep-link = "2"
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["sync", "time", "macros"] }
+keyring = "4"
+base64 = "0.22"
+sha2 = "0.10"
+rand = "0.9"
+uuid = { version = "1", features = ["v4", "serde"] }
+url = "2"
+thiserror = "2"
+log = "0.4"
+env_logger = { version = "0.11", default-features = false }
+
+# TLS: rustls on macOS (and Linux). Windows uses the OS TLS stack (SChannel) through native-tls, because
+# rustls' crypto providers (aws-lc, ring) need a Windows C toolchain and SChannel follows the system's
+# certificate store and policy updates.
+[target.'cfg(not(windows))'.dependencies]
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "http2", "query"] }
+
+[target.'cfg(windows)'.dependencies]
+reqwest = { version = "0.13", default-features = false, features = ["json", "native-tls", "http2", "query"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-app-kit = "0.3"
+objc2-core-foundation = "0.3"
+objc2-core-graphics = "0.3"
+objc2-system-configuration = { version = "0.3", default-features = false, features = ["std", "SCDynamicStore", "SCDynamicStoreCopySpecific"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
