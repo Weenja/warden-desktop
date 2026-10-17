@@ -73,10 +73,12 @@
 
 .sign-in .btn { justify-content: flex-start; padding-left: 18px; }
 .sign-in .btn .ico, .sign-in .btn .glyph { width: 20px; height: 20px; }
-.sign-in .btn span { flex: 1; text-align: center; margin-right: 20px; }
+/* The label is centred on the button: only the last span grows (not the Google "G"), and the icon
+   column (20px + 8px gap) is mirrored on the right. Same rule as the app's ui.css. */
+.sign-in .btn > span:last-child { flex: 1; text-align: center; margin-right: 28px; }
 .btn--google { background: #fff; color: #1F1F1F; border-color: #DADCE0; }
 .btn--apple { background: var(--ink); color: var(--bg); }
-.glyph-g { font: 900 18px/1 var(--f); color: #4285F4; width: 20px; text-align: center; }
+.glyph-g { font: 900 18px/1 var(--f); color: #4285F4; width: 20px; text-align: center; flex: none; }
 
 .code-boxes { display: flex; gap: 8px; justify-content: center; margin: 4px 0 16px; }
 .code-boxes span { width: 42px; height: 52px; border-radius: 12px; border: 1.5px solid var(--outline2); background: var(--s1); display: grid; place-items: center; font: 800 22px var(--f); }
