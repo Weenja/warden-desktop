@@ -1,0 +1,22 @@
+/* Additions to the approved mockup styles (ui.css) for the real extension pages. */
+
+/* Popup: the browser draws the frame, so the card fills the popup. */
+.popup-page{width:360px;background:var(--surface)}
+.popup-page .popup{border:0;border-radius:0;box-shadow:none}
+/* Firefox for Android opens the popup full width. */
+@media (max-width:500px){.popup-page{width:auto}.popup-page .popup{width:auto}}
+
+/* Email sign-in fields (not in the mockup; same shape as the buttons). */
+.field{width:100%;height:48px;padding:0 18px;border-radius:24px;border:1.5px solid var(--outline);background:var(--s1);color:var(--ink);font:650 16px/1 var(--f)}
+.field:focus{outline:2px solid var(--pri);outline-offset:1px}
+.field--code{text-align:center;letter-spacing:.3em;font-variant-numeric:tabular-nums}
+.signin .link{align-self:center}
+.error{margin:0;color:var(--coral);font-weight:700;text-align:center}
+.error:empty{display:none}
+.btn:disabled{opacity:.55;cursor:default}
+
+/* First-run status line title. */
+.status-title{font:inherit}
+
+/* Blocked page fills the tab. */
+html:has(.blocked-page),.blocked-page{height:100%}

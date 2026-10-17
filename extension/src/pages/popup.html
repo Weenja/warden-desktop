@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warden</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body class="popup-page">
+<!-- sprite -->
+
+<article class="popup tone-grey" id="main">
+  <header class="popup-head"><img src="icons/icon-48.png" alt="">Warden<span class="state-tag" id="tag"></span></header>
+
+  <div class="balance" id="balance">
+    <img id="mochi" src="mochi/guard.webp" alt="MOA">
+    <div><div class="balance-num" id="points">0<small>pts</small></div><div class="battery" id="battery"><i></i><b></b></div></div>
+  </div>
+
+  <div class="drain" id="drain">
+    <span class="site-ico" id="site-ico"></span>
+    <div><div class="drain-title" id="drain-title"></div><div class="drain-sub" id="drain-sub"></div></div>
+  </div>
+
+  <button class="btn btn--stop" id="stop" type="button"><svg class="ico"><use href="#i-stop"/></svg>Stop · close tab</button>
+  <button class="btn btn--tonal" id="close-tab" type="button"><svg class="ico"><use href="#i-x"/></svg>Close tab</button>
+  <p class="note" id="note">Guarded sites are set on your phone.</p>
+
+  <div class="popup-msg" id="msg">
+    <img id="msg-mochi" src="mochi/idle.webp" alt="MOA">
+    <h3 id="msg-title"></h3>
+    <p id="msg-text"></p>
+  </div>
+
+  <button class="btn btn--primary" id="open-app" type="button"><svg class="ico"><use href="#i-open"/></svg>Open Warden</button>
+
+  <div class="signin" id="signin">
+    <div class="signin" id="signin-start">
+      <button class="btn btn--google" id="google" type="button"><svg class="ico"><use href="#i-google"/></svg>Continue with Google</button>
+      <button class="btn btn--outline" id="email-start" type="button"><svg class="ico"><use href="#i-mail"/></svg>Email me a code</button>
+    </div>
+    <form class="signin" id="email-form" hidden>
+      <input class="field" id="email" type="email" autocomplete="email" placeholder="you@example.com" aria-label="Email" required>
+      <button class="btn btn--primary" type="submit">Send code</button>
+      <button class="link" id="email-cancel" type="button">Back</button>
+    </form>
+    <form class="signin" id="code-form" hidden>
+      <p class="note" id="code-note"></p>
+      <input class="field field--code" id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="123456" aria-label="6-digit code" required>
+      <button class="btn btn--primary" type="submit">Sign in</button>
+      <button class="link" id="code-back" type="button">Use another email</button>
+    </form>
+    <div class="signin" id="no-account" hidden>
+      <button class="btn btn--google" id="google-other" type="button"><svg class="ico"><use href="#i-google"/></svg>Use another account</button>
+      <a class="btn btn--outline" id="get-warden" target="_blank" rel="noopener"><svg class="ico"><use href="#i-phone"/></svg>Get Warden for your phone</a>
+    </div>
+    <p class="error" id="signin-error" role="alert"></p>
+  </div>
+
+  <div class="setting" id="chip-setting">Points chip on pages<button class="switch" id="chip-switch" type="button" role="switch" aria-checked="false" aria-label="Points chip on pages"></button></div>
+
+  <footer class="popup-foot"><svg class="ico ico--sm"><use id="foot-ico" href="#i-laptop"/></svg><span id="foot-text"></span><button class="link" id="facts-open" type="button">What it sends</button></footer>
+</article>
+
+<article class="popup tone-mint" id="facts" hidden>
+  <header class="popup-head"><button class="back" id="facts-close" type="button" aria-label="Back"><svg class="ico"><use href="#i-back"/></svg></button>What this extension sends</header>
+  <div class="facts">
+    <h4>Sends</h4>
+    <div class="fact fact--yes"><svg class="ico"><use href="#i-check"/></svg><span id="fact-site"></span></div>
+    <div class="fact fact--yes"><svg class="ico"><use href="#i-check"/></svg><span id="fact-time"></span></div>
+    <pre class="payload" id="payload"></pre>
+    <h4>Never</h4>
+    <div class="fact fact--no"><svg class="ico"><use href="#i-x"/></svg>Full links, history, page text, what you type</div>
+  </div>
+  <div class="facts">
+    <h4>Permissions</h4>
+    <ul class="perms" id="perms"></ul>
+  </div>
+  <button class="btn btn--outline" id="sign-out" type="button">Sign out</button>
+  <footer class="popup-foot"><svg class="ico ico--sm"><use href="#i-code"/></svg>Open source · AGPL-3.0</footer>
+</article>
+
+<script src="popup.js"></script>
+</body>
+</html>

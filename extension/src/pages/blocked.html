@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>that's your lot.</title>
+<link rel="icon" href="icons/icon-32.png">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body class="blocked-page">
+<!-- sprite -->
+
+<main class="blocked">
+  <img src="mochi/locked.webp" alt="MOA, locked">
+  <span class="blocked-site"><svg class="ico ico--sm"><use href="#i-lock"/></svg><span id="site"></span></span>
+  <h1>that's your lot.</h1>
+  <p id="text"></p>
+  <div class="btn-row">
+    <button class="btn btn--tonal" id="back" type="button"><svg class="ico"><use href="#i-back"/></svg>Go back</button>
+    <button class="btn btn--primary" id="close" type="button"><svg class="ico"><use href="#i-x"/></svg>Close tab</button>
+  </div>
+  <p class="blocked-foot">Guarded by you, on your phone · Warden is open source</p>
+</main>
+
+<script src="blocked.js"></script>
+</body>
+</html>

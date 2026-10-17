@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warden · Welcome</title>
+<link rel="icon" href="icons/icon-32.png">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<!-- sprite -->
+
+<main class="welcome">
+  <div class="welcome-hero">
+    <img src="mochi/happy.webp" alt="MOA">
+    <div><h1>Warden is on</h1><p id="hero-text"></p></div>
+  </div>
+
+  <div class="card tone-grey" id="status-card">
+    <div class="status"><i class="dot"></i><div><b class="status-title" id="status-title"></b><span id="status-text"></span></div></div>
+  </div>
+
+  <div class="card tone-grey" id="signin-card" hidden>
+    <h2 id="signin-title">Sign in</h2>
+    <p class="note note--left" id="signin-text">Same account as your phone.</p>
+    <div class="signin">
+      <button class="btn btn--google" id="google" type="button"><svg class="ico"><use href="#i-google"/></svg>Continue with Google</button>
+      <p class="note note--left" id="email-hint">Prefer email? Open Warden from the toolbar and choose “Email me a code”.</p>
+      <a class="btn btn--outline" id="get-warden" target="_blank" rel="noopener" hidden><svg class="ico"><use href="#i-phone"/></svg>Get Warden for your phone</a>
+      <p class="error" id="signin-error" role="alert"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>What it reads and sends</h2>
+    <div class="facts">
+      <div class="fact fact--yes"><svg class="ico"><use href="#i-check"/></svg>The domain of the front tab and how long it is open</div>
+      <div class="fact fact--no"><svg class="ico"><use href="#i-x"/></svg>No full links, no history, no page text</div>
+      <pre class="payload" id="payload"></pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Permissions</h2>
+    <ul class="perms" id="perms"></ul>
+    <p class="note note--left"><svg class="ico ico--sm" style="vertical-align:-3px"><use href="#i-code"/></svg> Open source, AGPL-3.0.</p>
+  </div>
+
+  <p class="note"><svg class="ico ico--sm" style="vertical-align:-3px"><use href="#i-phone"/></svg> Guarded sites are set on your phone.</p>
+</main>
+
+<script src="welcome.js"></script>
+</body>
+</html>
