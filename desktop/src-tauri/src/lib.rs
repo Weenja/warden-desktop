@@ -4,6 +4,10 @@ pub mod api;
 pub mod auth;
 mod commands;
 pub mod config;
+pub mod drain;
+pub mod guard;
+mod picker;
+mod placement;
 pub mod platform;
 pub mod session;
 pub mod sync;
@@ -18,6 +22,7 @@ use tauri_plugin_deep_link::DeepLinkExt;
 use crate::api::Api;
 use crate::auth::PendingSignIn;
 use crate::config::Config;
+use crate::guard::Guard;
 use crate::session::{KeychainStore, RefreshFn, SecretStore, SessionManager};
 use crate::sync::SyncService;
 
@@ -25,6 +30,7 @@ use crate::sync::SyncService;
 pub struct AppState {
     pub api: Api,
     pub sync: Arc<SyncService>,
+    pub guard: Arc<Guard>,
     pub pending: PendingSignIn,
 }
 
@@ -44,7 +50,7 @@ pub fn run() {
     // Warnings to stderr only (RUST_LOG=info for more). Nothing is logged to files or sent anywhere.
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default()
         // Must be first: a second launch (or, on Windows, a warden:// link that starts a new
         // process) hands its arguments to the running app and exits.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -57,6 +63,14 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        // "Open at login". The plugin's own JS commands are not granted to any window; the
+        // linked screen goes through get_autostart / set_autostart.
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None));
+    // macOS: lets the pill and shield become NSPanels (see placement/macos.rs).
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_nspanel::init());
+
+    let app = builder
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
             commands::sign_in_google,
@@ -66,6 +80,17 @@ pub fn run() {
             commands::open_signin,
             commands::close_signin,
             commands::quit_warden,
+            commands::pill_fit,
+            commands::pill_metrics,
+            commands::stop_draining,
+            commands::close_locked_app,
+            commands::list_apps,
+            commands::save_guarded_apps,
+            commands::open_picker,
+            commands::open_quit,
+            commands::close_window,
+            commands::get_autostart,
+            commands::set_autostart,
         ])
         .setup(|app| {
             // Menu bar app: no Dock icon, no app menu.
@@ -79,11 +104,13 @@ pub fn run() {
             let platform: Arc<dyn platform::Platform> = Arc::from(platform::current());
             let data_dir = app.path().app_data_dir()?;
             let sync = Arc::new(SyncService::new(api.clone(), session, platform, &data_dir));
-            app.manage(AppState { api, sync, pending: PendingSignIn::default() });
+            let guard = Guard::new(sync.clone(), &identifier);
+            app.manage(AppState { api, sync, guard, pending: PendingSignIn::default() });
 
             let handle = app.handle().clone();
             tray::create(&handle)?;
             ui_windows::create_popover(&handle)?;
+            ui_windows::create_drain_windows(&handle)?;
             listen_for_deep_links(&handle)?;
             tauri::async_runtime::spawn(start(handle));
             Ok(())
@@ -143,11 +170,18 @@ async fn start(app: AppHandle) {
     let scan = sync.clone();
     let scan_app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        scan.scan_browsers();
+        scan.scan_apps();
         tauri::async_runtime::block_on(async {
             commands::emit_state(&scan_app, &scan_app.state::<AppState>()).await;
         });
     });
+
+    let guard_app = app.clone();
+    tauri::async_runtime::spawn(state.guard.clone().run(move |update| {
+        ui_windows::apply_guard_update(&guard_app, update);
+        let app = guard_app.clone();
+        tauri::async_runtime::spawn(async move { commands::emit_state(&app, &app.state::<AppState>()).await });
+    }));
 
     let loop_app = app.clone();
     sync.run(move |error| {

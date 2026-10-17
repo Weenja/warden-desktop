@@ -10,6 +10,17 @@ fn main() {
         "open_signin",
         "close_signin",
         "quit_warden",
+        "pill_fit",
+        "pill_metrics",
+        "stop_draining",
+        "close_locked_app",
+        "list_apps",
+        "save_guarded_apps",
+        "open_picker",
+        "open_quit",
+        "close_window",
+        "get_autostart",
+        "set_autostart",
     ];
     tauri_build::try_build(
         tauri_build::Attributes::new().app_manifest(tauri_build::AppManifest::new().commands(commands)),

@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "quit",
+  "description": "Quit confirm: read the crew, quit (tells the crew), size and close itself.",
+  "windows": [
+    "quit"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-get-state",
+    "allow-quit-warden",
+    "allow-fit-window",
+    "allow-close-window"
+  ]
+}

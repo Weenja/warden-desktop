@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "shield",
+  "description": "Shield at zero: read the UI state, close the locked app.",
+  "windows": [
+    "shield"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-get-state",
+    "allow-close-locked-app"
+  ]
+}

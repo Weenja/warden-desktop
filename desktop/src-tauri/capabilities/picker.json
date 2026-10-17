@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "picker",
+  "description": "Guarded apps picker: list installed apps (locally), save the picks, size and close itself.",
+  "windows": [
+    "picker"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-get-state",
+    "allow-list-apps",
+    "allow-save-guarded-apps",
+    "allow-fit-window",
+    "allow-close-window"
+  ]
+}

@@ -18,9 +18,10 @@ tauri = { version = "2", features = ["tray-icon", "image-png", "macos-private-ap
 tauri-plugin-deep-link = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-opener = "2"
+tauri-plugin-autostart = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["sync", "time", "macros"] }
+tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
 keyring = "4"
 base64 = "0.22"
 sha2 = "0.10"
@@ -46,6 +47,7 @@ objc2-foundation = "0.3"
 objc2-app-kit = "0.3"
 objc2-core-foundation = "0.3"
 objc2-core-graphics = "0.3"
+tauri-nspanel = "2.1"
 objc2-system-configuration = { version = "0.3", default-features = false, features = ["std", "SCDynamicStore", "SCDynamicStoreCopySpecific"] }
 
 [dev-dependencies]

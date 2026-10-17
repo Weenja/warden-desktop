@@ -4,11 +4,16 @@
 
 use std::time::Duration;
 
-use tauri::{AppHandle, Emitter, LogicalSize, State, WebviewWindow};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, State, WebviewWindow};
 use tauri_plugin_opener::OpenerExt;
 
-use crate::api::{ApiError, TokenResponse};
+use tauri_plugin_autostart::ManagerExt as _;
+
+use crate::api::{ApiError, GuardedItem, TokenResponse};
 use crate::auth::{self, looks_like_email};
+use crate::drain::DrainKind;
+use crate::picker::{picker_apps, PickerApp};
+use crate::placement::{self, PillMetrics};
 use crate::session::{Session, SessionError};
 use crate::sync::{iso_now, SyncError, UiState};
 use crate::{ui_windows, AppState};
@@ -26,7 +31,11 @@ pub struct AuthResult {
 
 #[tauri::command]
 pub async fn get_state(state: State<'_, AppState>) -> Result<UiState, String> {
-    Ok(state.sync.ui_state().await)
+    Ok(ui_state(&state).await)
+}
+
+async fn ui_state(state: &AppState) -> UiState {
+    state.sync.ui_state(&state.guard.view()).await
 }
 
 /// Open Google sign-in in the user's default browser. It returns through the deep link.
@@ -83,6 +92,110 @@ pub fn close_signin(app: AppHandle) {
     ui_windows::close_signin(&app);
 }
 
+/// The pill page measured itself.
+#[tauri::command]
+pub fn pill_fit(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+    ui_windows::fit_pill(&app, width.clamp(40.0, 600.0), height.clamp(20.0, 600.0)).map_err(|e| e.to_string())
+}
+
+/// Notch width and menu bar height, so the pill lines up with the notch.
+#[tauri::command]
+pub fn pill_metrics(window: WebviewWindow) -> PillMetrics {
+    placement::pill_metrics(&window)
+}
+
+/// Stop on the pill. An app is asked to quit (the polite quit: it may ask to save). A whole
+/// browser is left open (closing every tab would be too much): its pill hides, it keeps draining
+/// while it is in front.
+#[tauri::command]
+pub async fn stop_draining(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let Some(drain) = state.guard.view().drain else {
+        return Ok(());
+    };
+    match drain.kind {
+        DrainKind::App => {
+            state.sync.platform().terminate_app(&drain.app_id);
+        }
+        DrainKind::Browser => {
+            state.guard.hide_pill(&drain.app_id);
+            if let Some(pill) = app.get_webview_window(ui_windows::PILL) {
+                let _ = pill.hide();
+            }
+        }
+    }
+    Ok(())
+}
+
+/// "Close <app>" on the shield: ask the locked app to quit.
+#[tauri::command]
+pub async fn close_locked_app(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let Some(shield) = state.guard.view().shield else {
+        return Ok(());
+    };
+    state.guard.closing(&shield.app_id);
+    if let Some(win) = app.get_webview_window(ui_windows::SHIELD) {
+        let _ = win.hide();
+    }
+    state.sync.platform().terminate_app(&shield.app_id);
+    Ok(())
+}
+
+/// The picker's list. Reads the disk again (apps may have been installed since start), off
+/// the main thread.
+#[tauri::command]
+pub async fn list_apps(app: AppHandle, state: State<'_, AppState>) -> Result<Vec<PickerApp>, String> {
+    let sync = state.sync.clone();
+    tauri::async_runtime::spawn_blocking(move || sync.scan_apps()).await.map_err(|e| e.to_string())?;
+    let guarded: Vec<GuardedItem> =
+        state.sync.guarded_apps().into_iter().map(|t| GuardedItem { token: t.token, label: t.label }).collect();
+    Ok(picker_apps(&state.sync.installed_apps(), &guarded, &app.config().identifier))
+}
+
+/// "Done" in the picker: these apps are the guarded apps of this computer from now on.
+#[tauri::command]
+pub async fn save_guarded_apps(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    items: Vec<GuardedItem>,
+) -> Result<(), String> {
+    state.sync.set_guarded_apps(&items).await.map_err(|e| match e {
+        SyncError::Api(ApiError::Network(_)) => "No connection. Your picks were not saved.".to_string(),
+        _ => "Could not save your picks. Try again.".to_string(),
+    })?;
+    emit_state(&app, &state).await;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn open_picker(app: AppHandle) -> Result<(), String> {
+    ui_windows::open_picker(&app).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn open_quit(app: AppHandle) -> Result<(), String> {
+    ui_windows::open_quit(&app).map_err(|e| e.to_string())
+}
+
+/// A dialog's own close button ("Keep Warden on", "Done").
+#[tauri::command]
+pub fn close_window(window: WebviewWindow) {
+    let _ = window.close();
+}
+
+/// "Open at login": a login item (LaunchAgent on macOS, Run key on Windows) that starts Warden.
+#[tauri::command]
+pub fn get_autostart(app: AppHandle) -> Result<bool, String> {
+    app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_autostart(app: AppHandle, on: bool) -> Result<bool, String> {
+    let autolaunch = app.autolaunch();
+    if on { autolaunch.enable() } else { autolaunch.disable() }
+        .map_err(|_| "Could not change the login item.".to_string())?;
+    autolaunch.is_enabled().map_err(|e| e.to_string())
+}
+
 /// Quit Warden. The crew is told: a last heartbeat carries `stopped_at`, as on Android.
 #[tauri::command]
 pub async fn quit_warden(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
@@ -103,6 +216,13 @@ pub async fn finish_sign_in(app: &AppHandle, state: &AppState, tokens: TokenResp
         other => other.to_string(),
     })?;
     state.sync.full_sync().await.map_err(|e| friendly_sync_error(&e))?;
+    // A guard is only useful if it runs: open at login by default. The linked screen shows the
+    // switch right away. Not in debug builds, which would register a dev binary.
+    if !cfg!(debug_assertions) {
+        if let Err(e) = app.autolaunch().enable() {
+            log::warn!("could not turn on open at login: {e}");
+        }
+    }
     emit_state(app, state).await;
     Ok(())
 }
@@ -134,8 +254,7 @@ pub async fn handle_auth_callback(app: &AppHandle, state: &AppState, url: &str) 
 }
 
 pub async fn emit_state(app: &AppHandle, state: &AppState) {
-    let ui = state.sync.ui_state().await;
-    let _ = app.emit(STATE_EVENT, ui);
+    let _ = app.emit(STATE_EVENT, ui_state(state).await);
 }
 
 fn friendly_auth_error(e: &ApiError) -> String {

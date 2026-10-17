@@ -20,6 +20,8 @@ use crate::api::{
     SpendTarget, Wallet,
 };
 use crate::config::APP_VERSION;
+use crate::drain::GuardedApp;
+use crate::guard::{DrainView, GuardView, ShieldView};
 use crate::platform::{self, Platform, KNOWN_BROWSERS};
 use crate::session::{now_secs, SessionError, SessionManager};
 
@@ -79,11 +81,20 @@ pub struct LinkedDevice {
     pub name: String,
 }
 
+/// An installed app as the UI shows it (browsers, the picker, the pill).
 #[derive(Debug, Clone, Serialize)]
-pub struct Browser {
+pub struct AppEntry {
     pub id: String,
     pub name: String,
     /// `data:image/png;base64,...`, so the UI needs no file access.
+    pub icon: Option<String>,
+}
+
+/// A guarded app of this computer, with its icon when the app is installed.
+#[derive(Debug, Clone, Serialize)]
+pub struct GuardedAppView {
+    pub token: String,
+    pub label: String,
     pub icon: Option<String>,
 }
 
@@ -94,7 +105,8 @@ struct SyncState {
     balance: Option<BalanceClaims>,
     targets: Vec<BlockTarget>,
     crew: Vec<String>,
-    browsers: Vec<Browser>,
+    /// Installed apps, read from disk once at start and again when the picker opens.
+    apps: Vec<AppEntry>,
     /// False after a failed request, true after the next good one. Shown as "offline".
     online: bool,
 }
@@ -105,14 +117,20 @@ pub struct UiState {
     pub signed_in: bool,
     pub email: Option<String>,
     pub device: Option<LinkedDevice>,
+    /// The local, optimistic balance while the drain knows it (it counts down between ticks);
+    /// the server's otherwise.
     pub balance_seconds: Option<i64>,
     pub daily_max_seconds: Option<i64>,
     pub low_balance: bool,
-    pub guarded_apps: Vec<GuardedItem>,
+    pub guarded_apps: Vec<GuardedAppView>,
     pub guarded_sites: usize,
     pub crew: Vec<String>,
-    pub browsers: Vec<Browser>,
+    pub browsers: Vec<AppEntry>,
     pub online: bool,
+    /// What drains now (the pill). None = the pill is hidden.
+    pub drain: Option<DrainView>,
+    /// The shield, when a guarded app is in front at zero.
+    pub shield: Option<ShieldView>,
 }
 
 pub struct SyncService {
@@ -160,6 +178,14 @@ impl SyncService {
             .iter()
             .filter(|t| t.kind == "app" && t.device_id.as_deref() == me && me.is_some())
             .cloned()
+            .collect()
+    }
+
+    /// Guarded apps joined to their block-list rows, as the drain needs them.
+    pub fn guarded_for_drain(&self) -> Vec<GuardedApp> {
+        self.guarded_apps()
+            .into_iter()
+            .map(|t| GuardedApp { app_id: t.token, target_id: t.id, label: t.label })
             .collect()
     }
 
@@ -235,6 +261,7 @@ impl SyncService {
         let (target_id, site) = match target {
             SpendTarget::Target(id) => (Some(id.as_str()), None),
             SpendTarget::Site(host) => (None, Some(host.as_str())),
+            SpendTarget::WholeBrowser => (None, None),
         };
         let body = SpendRequest { device_id: &device_id, target_id, site, seconds, evidence };
         let api = &self.api;
@@ -268,20 +295,29 @@ impl SyncService {
         Ok(())
     }
 
-    /// Which known browsers are installed. Reads the disk, so it runs once in the background.
-    pub fn scan_browsers(&self) {
-        let browsers = self
+    /// Read the installed apps (browsers, picker, icons). Reads the disk: call it off the UI
+    /// thread. The list stays on this computer; only apps the user picks are sent.
+    pub fn scan_apps(&self) {
+        let apps = self
             .platform
             .installed_apps()
             .into_iter()
-            .filter(|app| KNOWN_BROWSERS.contains(&app.id.as_str()))
-            .map(|app| Browser {
+            .map(|app| AppEntry {
                 icon: app.icon_png.map(|png| format!("data:image/png;base64,{}", STANDARD.encode(png))),
                 id: app.id,
                 name: app.name,
             })
             .collect();
-        self.state.lock().unwrap().browsers = browsers;
+        self.state.lock().unwrap().apps = apps;
+    }
+
+    pub fn installed_apps(&self) -> Vec<AppEntry> {
+        self.state.lock().unwrap().apps.clone()
+    }
+
+    /// The icon of an installed app, for the pill and the popover.
+    pub fn app_icon(&self, id: &str) -> Option<String> {
+        self.state.lock().unwrap().apps.iter().find(|a| a.id == id).and_then(|a| a.icon.clone())
     }
 
     fn store_wallet(&self, wallet: Wallet, token: &str) {
@@ -293,29 +329,36 @@ impl SyncService {
     /// Forget everything that belongs to the signed-out user.
     pub fn clear(&self) {
         let mut state = self.state.lock().unwrap();
-        let browsers = std::mem::take(&mut state.browsers);
-        *state = SyncState { online: true, browsers, ..Default::default() };
+        let apps = std::mem::take(&mut state.apps);
+        *state = SyncState { online: true, apps, ..Default::default() };
     }
 
-    pub async fn ui_state(&self) -> UiState {
+    /// What the windows render: the synced state plus what the drain loop sees (`guard`).
+    pub async fn ui_state(&self, guard: &GuardView) -> UiState {
         let signed_in = self.session.is_signed_in().await;
         let email = self.session.email().await;
-        let guarded_apps =
-            self.guarded_apps().into_iter().map(|t| GuardedItem { token: t.token, label: t.label }).collect();
+        let guarded_apps: Vec<GuardedAppView> = self
+            .guarded_apps()
+            .into_iter()
+            .map(|t| GuardedAppView { icon: self.app_icon(&t.token), token: t.token, label: t.label })
+            .collect();
         let guarded_sites = self.guarded_sites().len();
         let state = self.state.lock().unwrap();
+        let browsers = state.apps.iter().filter(|a| KNOWN_BROWSERS.contains(&a.id.as_str())).cloned().collect();
         UiState {
             signed_in,
             email,
             device: state.device.clone(),
-            balance_seconds: state.wallet.as_ref().map(|w| w.balance_seconds),
+            balance_seconds: guard.balance_seconds.or(state.wallet.as_ref().map(|w| w.balance_seconds)),
             daily_max_seconds: state.wallet.as_ref().and_then(|w| w.daily_max_seconds),
             low_balance: state.wallet.as_ref().is_some_and(|w| w.low_balance),
             guarded_apps,
             guarded_sites,
             crew: state.crew.clone(),
-            browsers: state.browsers.clone(),
+            browsers,
             online: state.online,
+            drain: guard.drain.clone(),
+            shield: guard.shield.clone(),
         }
     }
 

@@ -1,8 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "signin",
-  "description": "Sign-in and linked window: start a sign-in, read the UI state, size and close itself.",
-  "windows": ["signin"],
+  "description": "Sign-in and linked window: start a sign-in, read the UI state, size and close itself, switch open at login.",
+  "windows": [
+    "signin"
+  ],
   "permissions": [
     "core:event:allow-listen",
     "core:event:allow-unlisten",
@@ -11,6 +13,8 @@
     "allow-send-email-code",
     "allow-verify-email-code",
     "allow-fit-window",
-    "allow-close-signin"
+    "allow-close-signin",
+    "allow-get-autostart",
+    "allow-set-autostart"
   ]
 }

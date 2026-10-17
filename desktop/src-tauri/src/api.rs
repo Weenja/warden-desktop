@@ -124,11 +124,14 @@ pub struct HeartbeatResponse {
     pub balance_token_expires_at: String,
 }
 
-/// What a spend tick charges: a guarded app (`target_id`) or a guarded site (`site`).
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// What a spend tick charges: a guarded app (`target_id`), a guarded site (`site`), or a whole
+/// browser Warden cannot see into (neither field). The last one matches Android's "whole browser"
+/// tick: the server charges the balance and keeps the raw seconds in the ledger with no target.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SpendTarget {
     Target(String),
     Site(String),
+    WholeBrowser,
 }
 
 #[derive(Debug, Clone, Serialize)]
