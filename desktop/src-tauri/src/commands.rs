@@ -86,12 +86,18 @@ pub async fn verify_email_code(
 
 /// Size a window to its content. The page measures itself after layout and reports here,
 /// so the window never shows scroll bars or empty space.
+///
+/// `viewport` is the height the page can see right now. On macOS the title bar sits over
+/// the top of the web view, so the window's inner height is taller than the page's viewport
+/// (about 30 px on a titled window, 0 on borderless ones). We add that difference, or the
+/// last line of the page would be cut off.
 #[tauri::command]
-pub fn fit_window(window: WebviewWindow, height: f64) -> Result<(), String> {
-    let height = height.clamp(60.0, 900.0);
-    let width =
-        window.inner_size().map_err(|e| e.to_string())?.to_logical::<f64>(window.scale_factor().unwrap_or(1.0)).width;
-    window.set_size(LogicalSize::new(width, height)).map_err(|e| e.to_string())
+pub fn fit_window(window: WebviewWindow, height: f64, viewport: f64) -> Result<(), String> {
+    let inner = window.inner_size().map_err(|e| e.to_string())?.to_logical::<f64>(window.scale_factor().unwrap_or(1.0));
+    // Clamped: while a resize is still settling the two numbers can disagree for a moment.
+    let title_bar = (inner.height - viewport).clamp(0.0, 80.0);
+    let height = (height + title_bar).clamp(60.0, 900.0);
+    window.set_size(LogicalSize::new(inner.width, height)).map_err(|e| e.to_string())
 }
 
 /// "Sign in" from the popover when the session is gone.

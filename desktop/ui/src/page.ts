@@ -31,14 +31,19 @@ export function applyOsWording(): void {
 /** Resize the window to the content after every layout change, so nothing scrolls or gapes. */
 export function fitWindowToContent(content: HTMLElement): void {
   let last = 0;
-  const fit = () => {
+  const fit = (force = false) => {
     const height = Math.ceil(content.getBoundingClientRect().height);
-    if (height !== last) {
+    if (force || height !== last) {
       last = height;
-      void core.fitWindow(height);
+      void core.fitWindow(height, window.innerHeight);
     }
   };
-  new ResizeObserver(fit).observe(content);
+  new ResizeObserver(() => fit()).observe(content);
+  // The OS applies a new size a moment later. If the page still does not fit then (for
+  // example the title bar took more room than measured), fit again with fresh numbers.
+  addEventListener("resize", () => {
+    if (document.documentElement.scrollHeight > window.innerHeight + 1) fit(true);
+  });
   fit();
 }
 
