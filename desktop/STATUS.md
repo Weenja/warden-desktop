@@ -1,6 +1,6 @@
 # Warden desktop — status
 
-Updated 2026-10-17 (builder 1: foundation; builder 2: macOS drain, pill, shield, picker, quit, autostart). Staging build by default: "Warden β", `in.weenja.warden.desktop.staging`.
+Updated 2026-10-18 (browser extension link); 2026-10-17 (builder 1: foundation; builder 2: macOS drain, pill, shield, picker, quit, autostart). Staging build by default: "Warden β", `in.weenja.warden.desktop.staging`.
 
 ## Works
 - Tauri v2 tray-only app: no Dock icon (`LSUIElement` + `ActivationPolicy::Accessory`), MOA template icon in the menu bar, popover under the icon (hides on blur), single instance, strict CSP, per-window capabilities (`src-tauri/capabilities/`).
@@ -78,6 +78,27 @@ Needs a real Windows PC:
 - Lock state flips on Win+L; device name matches Settings > About.
 - Pill: does not take focus from the app in front, not in Alt+Tab, no taskbar button, transparent corners. Popover with the taskbar on each edge and at 150 %/200 % scaling. Shield leaves the taskbar visible.
 - NSIS installer: installs without admin, `warden://auth-callback` opens the running app (single instance), Google sign-in end to end.
+
+## Browser extension link (2026-10-18, `src/browser_ext/`)
+Native messaging per EXTENSION-BRIEF. Host name `in.weenja.warden.staging`; Chrome id `blcmgpbfbbemkkcfjgbhgblnapbndfgp` (from `extension/README.md`), Firefox `extension-staging@getwarden.app` (constants in `browser_ext/mod.rs`).
+- Host mode: `main.rs` checks the args first (`chrome-extension://…` or the Firefox id) and runs `browser_ext::host::run()` (no Tauri). It relays frames stdin/stdout <-> the app's local endpoint (macOS `~/Library/Application Support/in.weenja.warden.desktop.staging/ext.sock`, mode 0600; Windows `\\.\pipe\warden-staging-ext-<domain>-<user>`, first instance only, no remote clients). App not reachable: `open -g -b <bundle id>` (Windows: this exe, detached, breakaway from the browser's job if allowed), retry every 1 s for 15 s, then 5 s; the last `hello` + `tab` are replayed after every (re)connect. Exits when the browser closes stdin.
+- Anti-tamper: the app accepts a connection only from its OWN exe (peer pid: `LOCAL_PEERPID` / `GetNamedPipeClientProcessId`) and finds the browser itself by walking the host's parents to the first `KNOWN_BROWSERS` app (Windows: through cmd.exe). The host's word is not trusted. Started by hand from a terminal = linked with no browser: gets hello + state, never changes the drain. The Windows host also checks the pipe server is Warden (anti-squatting).
+- Manifests at every start (`browser_ext/manifest.rs`, rewritten only when changed): macOS for each installed browser folder (Chrome, Chrome Beta, ChromeForTesting, Chromium, Edge, Brave, Arc, Vivaldi; Firefox -> `Mozilla/`); Windows two JSON files in the app data folder + HKCU keys for Chrome, Edge, Brave, Chromium, Vivaldi, Mozilla.
+- Drain (`drain.rs`): browser with a linked extension -> drains only when its last tab is on a guarded site (equal or subdomain, most specific) and not idle; kind `site`, label = the guarded site, tick `spend-tick {site: host}`. No extension -> whole browser as before. Several links for one browser (Chrome profiles): the most recent tab report wins. Locked on a site: no shield (the extension shows its blocked page); `close_tab` if still open after 3 s; pill Stop = `close_tab`. `state` goes to every extension on each change (deduped). Popover browsers row: "Linked" / "No extension". "Open Warden" (`show_app`) opens the popover, or sign-in when signed out.
+
+Tested 2026-10-18:
+- Unit: frame codec, host-launch args, replay, link registry (hello/state/dedupe/per-browser close_tab), site match, browser drain choice, manifests (allowed ids, idempotent write).
+- Staging (`extension_site_drain_and_whole_browser`): fake Mac, Chrome in front, fake extension on `m.youtube.com` with `youtube.com` guarded: 300 -> 270 s; ledger row target = the youtube.com block target. example.com and idle: nothing charged; server refuses `site: example.com` (404). Extension gone: whole-browser tick 270 -> 240, ledger target null.
+- Real host round trip on this Mac: the debug .app binary started as `warden chrome-extension://<id>/` with framed stdin got `hello` + `state` from the running app; with the app quit, the host started it (`open -b`) and still got both. A plain Python client on the socket is refused (closed, no reply). Manifests verified on disk for Chrome, Chromium, Edge, Brave, Arc, Vivaldi, ChromeForTesting (no Firefox installed here).
+
+Builds (2026-10-18):
+- Mac debug app rebuilt: `src-tauri/target/debug/bundle/macos/Warden β.app` (running on this Mac; it wrote the manifests above).
+- Windows NSIS installer (release, unsigned, per user): `src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/Warden β_0.1.0_x64-setup.exe` (3.6 MB). Build: `brew install nsis`, then `LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 PATH="/opt/homebrew/opt/llvm/bin:$PATH" npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis`. makensis 3.13 crashes (`std::bad_alloc`) when no locale is set, so the locale variables are required.
+- Regression: the old drain staging test still passes (Steam 3 ticks, whole-browser tick).
+
+Needs Jojo:
+- Mac: load the extension in real Chrome, open youtube.com with a guarded YouTube: pill says "youtube.com · N pts left", popover shows Chrome "Linked"; Stop closes the tab; at 0 the blocked page shows (no shield over Chrome). Firefox not installed here (Mozilla manifest untested).
+- Windows: release builds are GUI-subsystem exes; Chrome starts hosts through `cmd /c`. Check the extension links (popover "Linked"). If Chrome reports "Native host has exited", the fix is a small console host exe beside the app.
 
 ## Left
 - Prod config (`config/prod.json`, identifier `in.weenja.warden.desktop`) waits for Jojo's approval.
