@@ -9,36 +9,87 @@
 //! So right after a Google sign-in, before anything is written for it, we look for that case
 //! and undo it with the user's own `delete-account` call.
 //!
-//! SAFETY INVARIANT: never delete an account that has any device or is older than
-//! [`JUST_CREATED_SECS`]. Anything unclear (no or unreadable `created_at`, a `created_at` in the
-//! future because of clock skew) keeps the account. Only [`verdict`] decides, and it is tested.
+//! SAFETY INVARIANT: delete ONLY when every one of these holds, else keep:
+//! - the account is younger than [`JUST_CREATED_SECS`] (a `created_at` in the future = keep),
+//! - it has no device at all (phone or computer),
+//! - it has exactly one identity, and that identity is Google (this sign-in),
+//! - that identity was made within [`SAME_MOMENT_SECS`] of the account, so this sign-in CREATED
+//!   the account. A phone account starts anonymous and links Google later, so its Google
+//!   identity is clearly newer than the account.
+//!
+//! Any missing or unreadable field keeps the account. Only [`verdict`] decides, and it is tested.
 
-use crate::api::{Api, ApiError, TokenResponse};
+use crate::api::{Api, ApiError, AuthUser, TokenResponse};
 
 /// An account younger than this may be one the sign-in itself just made.
 pub const JUST_CREATED_SECS: i64 = 10 * 60;
+/// An identity made this close to its account was made by the same sign-up.
+pub const SAME_MOMENT_SECS: i64 = 5;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {
-    /// A real account: sign in as usual.
+    /// A real account (or we cannot tell): sign in as usual.
     Keep,
     /// The empty account this sign-in just made: delete it and say "No account".
     Reject,
 }
 
-/// True only when `created_at` is known and between 0 and 10 minutes ago. Older, unknown or in
-/// the future (clock skew) is false. Lets the sign-in skip the device read for old accounts.
-pub fn is_just_created(created_at: Option<i64>, now: i64) -> bool {
-    match created_at {
-        Some(created) => (0..JUST_CREATED_SECS).contains(&(now - created)),
-        None => false,
+/// What the sign-in response says about the account, with timestamps parsed to Unix seconds.
+/// `None` = missing or unreadable.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AccountFacts {
+    pub created_at: Option<i64>,
+    pub identities: Option<Vec<IdentityFacts>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityFacts {
+    pub provider: Option<String>,
+    pub created_at: Option<i64>,
+}
+
+impl AccountFacts {
+    pub fn from_user(user: &AuthUser) -> AccountFacts {
+        let time = |t: &Option<String>| t.as_deref().and_then(unix_from_rfc3339);
+        AccountFacts {
+            created_at: time(&user.created_at),
+            identities: user.identities.as_ref().map(|ids| {
+                ids.iter()
+                    .map(|i| IdentityFacts { provider: i.provider.clone(), created_at: time(&i.created_at) })
+                    .collect()
+            }),
+        }
+    }
+
+    /// Between 0 and 10 minutes old. Older, unknown or in the future (clock skew) is false.
+    fn is_just_created(&self, now: i64) -> bool {
+        matches!(self.created_at, Some(created) if (0..JUST_CREATED_SECS).contains(&(now - created)))
+    }
+
+    /// Exactly one identity, it is Google, and it was made with the account (not linked later).
+    fn created_by_google_sign_in(&self) -> bool {
+        let (Some(account_at), Some(ids)) = (self.created_at, self.identities.as_deref()) else {
+            return false;
+        };
+        match ids {
+            [only] => {
+                only.provider.as_deref() == Some("google")
+                    && matches!(only.created_at, Some(at) if (at - account_at).abs() <= SAME_MOMENT_SECS)
+            }
+            _ => false,
+        }
+    }
+
+    /// Worth one devices read? False for every account [`verdict`] would keep anyway.
+    pub fn may_be_empty_google_account(&self, now: i64) -> bool {
+        self.is_just_created(now) && self.created_by_google_sign_in()
     }
 }
 
 /// `device_platforms`: the platforms of the account's devices (`android`, `ios`, `macos`,
-/// `windows`); one is enough. Reject only a just-created account with no device at all.
-pub fn verdict(created_at: Option<i64>, now: i64, device_platforms: &[String]) -> Verdict {
-    if is_just_created(created_at, now) && device_platforms.is_empty() {
+/// `windows`); one is enough to keep it. See the safety invariant at the top of this file.
+pub fn verdict(account: &AccountFacts, now: i64, device_platforms: &[String]) -> Verdict {
+    if account.may_be_empty_google_account(now) && device_platforms.is_empty() {
         Verdict::Reject
     } else {
         Verdict::Keep
@@ -55,13 +106,14 @@ pub enum Screened {
 /// Run right after the Google code exchange, before the session is saved or the computer is
 /// registered. At most one read (`devices`) and, only on [`Verdict::Reject`], one delete.
 pub async fn screen_google_sign_in(api: &Api, tokens: &TokenResponse, now: i64) -> Result<Screened, ApiError> {
-    let created_at = tokens.user.created_at.as_deref().and_then(unix_from_rfc3339);
-    // Cheap pre-filter: an account older than 10 minutes is real; no request needed.
-    if !is_just_created(created_at, now) {
+    let account = AccountFacts::from_user(&tokens.user);
+    // Cheap pre-filter: an old account, or one that did not come from this Google sign-in, is
+    // kept with no request.
+    if !account.may_be_empty_google_account(now) {
         return Ok(Screened::Kept);
     }
     let platforms: Vec<String> = api.any_device(&tokens.access_token).await?.into_iter().map(|d| d.platform).collect();
-    match verdict(created_at, now, &platforms) {
+    match verdict(&account, now, &platforms) {
         Verdict::Keep => Ok(Screened::Kept),
         Verdict::Reject => {
             api.delete_account(&tokens.access_token).await?;
@@ -141,36 +193,81 @@ mod tests {
         p.iter().map(|s| s.to_string()).collect()
     }
 
+    fn identity(provider: &str, created_at: i64) -> IdentityFacts {
+        IdentityFacts { provider: Some(provider.into()), created_at: Some(created_at) }
+    }
+
+    /// An account a Google sign-in created `age` seconds ago: one Google identity, same moment.
+    fn google_made(age: i64) -> AccountFacts {
+        AccountFacts { created_at: Some(NOW - age), identities: Some(vec![identity("google", NOW - age)]) }
+    }
+
+    #[test]
+    fn young_google_made_account_with_no_devices_is_rejected() {
+        assert_eq!(verdict(&google_made(0), NOW, &[]), Verdict::Reject);
+        assert_eq!(verdict(&google_made(JUST_CREATED_SECS - 1), NOW, &[]), Verdict::Reject);
+        let mut slightly_later = google_made(60);
+        slightly_later.identities = Some(vec![identity("google", NOW - 60 + SAME_MOMENT_SECS)]);
+        assert_eq!(verdict(&slightly_later, NOW, &[]), Verdict::Reject);
+    }
+
     #[test]
     fn old_account_is_kept_even_with_no_devices() {
-        assert_eq!(verdict(Some(NOW - JUST_CREATED_SECS), NOW, &[]), Verdict::Keep);
-        assert_eq!(verdict(Some(NOW - 86_400 * 30), NOW, &[]), Verdict::Keep);
+        assert_eq!(verdict(&google_made(JUST_CREATED_SECS), NOW, &[]), Verdict::Keep);
+        assert_eq!(verdict(&google_made(86_400 * 30), NOW, &[]), Verdict::Keep);
     }
 
     #[test]
     fn young_account_with_a_phone_is_kept() {
-        assert_eq!(verdict(Some(NOW - 60), NOW, &platforms(&["android"])), Verdict::Keep);
-        assert_eq!(verdict(Some(NOW - 60), NOW, &platforms(&["ios"])), Verdict::Keep);
+        assert_eq!(verdict(&google_made(60), NOW, &platforms(&["android"])), Verdict::Keep);
+        assert_eq!(verdict(&google_made(60), NOW, &platforms(&["ios"])), Verdict::Keep);
     }
 
     #[test]
     fn young_account_with_only_a_computer_is_kept() {
-        assert_eq!(verdict(Some(NOW - 60), NOW, &platforms(&["macos"])), Verdict::Keep);
-        assert_eq!(verdict(Some(NOW - 60), NOW, &platforms(&["windows"])), Verdict::Keep);
-    }
-
-    #[test]
-    fn young_account_with_no_devices_is_rejected() {
-        assert_eq!(verdict(Some(NOW), NOW, &[]), Verdict::Reject);
-        assert_eq!(verdict(Some(NOW - 5), NOW, &[]), Verdict::Reject);
-        assert_eq!(verdict(Some(NOW - JUST_CREATED_SECS + 1), NOW, &[]), Verdict::Reject);
+        assert_eq!(verdict(&google_made(60), NOW, &platforms(&["macos"])), Verdict::Keep);
+        assert_eq!(verdict(&google_made(60), NOW, &platforms(&["windows"])), Verdict::Keep);
     }
 
     #[test]
     fn clock_skew_or_unknown_age_keeps_the_account() {
-        assert_eq!(verdict(Some(NOW + 1), NOW, &[]), Verdict::Keep, "created_at in the future");
-        assert_eq!(verdict(Some(NOW + 3600), NOW, &[]), Verdict::Keep);
-        assert_eq!(verdict(None, NOW, &[]), Verdict::Keep, "no created_at");
+        assert_eq!(verdict(&google_made(-1), NOW, &[]), Verdict::Keep, "created_at in the future");
+        assert_eq!(verdict(&google_made(-3600), NOW, &[]), Verdict::Keep);
+        let mut unknown = google_made(60);
+        unknown.created_at = None;
+        assert_eq!(verdict(&unknown, NOW, &[]), Verdict::Keep, "no created_at");
+    }
+
+    #[test]
+    fn google_linked_later_is_kept() {
+        // A phone account: made anonymous, Google linked 2 minutes later.
+        let linked = AccountFacts { created_at: Some(NOW - 180), identities: Some(vec![identity("google", NOW - 60)]) };
+        assert_eq!(verdict(&linked, NOW, &[]), Verdict::Keep);
+        let just_over = AccountFacts {
+            created_at: Some(NOW - 60),
+            identities: Some(vec![identity("google", NOW - 60 + SAME_MOMENT_SECS + 1)]),
+        };
+        assert_eq!(verdict(&just_over, NOW, &[]), Verdict::Keep);
+    }
+
+    #[test]
+    fn identities_must_be_exactly_one_google() {
+        let two = AccountFacts {
+            created_at: Some(NOW - 60),
+            identities: Some(vec![identity("google", NOW - 60), identity("email", NOW - 60)]),
+        };
+        assert_eq!(verdict(&two, NOW, &[]), Verdict::Keep, "two identities");
+        let none = AccountFacts { created_at: Some(NOW - 60), identities: Some(vec![]) };
+        assert_eq!(verdict(&none, NOW, &[]), Verdict::Keep, "no identities (anonymous)");
+        let missing = AccountFacts { created_at: Some(NOW - 60), identities: None };
+        assert_eq!(verdict(&missing, NOW, &[]), Verdict::Keep, "identities missing");
+        let email = AccountFacts { created_at: Some(NOW - 60), identities: Some(vec![identity("email", NOW - 60)]) };
+        assert_eq!(verdict(&email, NOW, &[]), Verdict::Keep, "not Google");
+        let undated = AccountFacts {
+            created_at: Some(NOW - 60),
+            identities: Some(vec![IdentityFacts { provider: Some("google".into()), created_at: None }]),
+        };
+        assert_eq!(verdict(&undated, NOW, &[]), Verdict::Keep, "identity created_at missing");
     }
 
     #[test]

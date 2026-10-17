@@ -11,7 +11,8 @@ use std::sync::{Arc, Mutex};
 
 use serde_json::{json, Value};
 use warden_desktop_lib::api::{
-    Api, ApiError, DevicePlatform, GuardedItem, HeartbeatRequest, RegisterDevice, SpendTarget, TokenResponse,
+    Api, ApiError, AuthIdentity, DevicePlatform, GuardedItem, HeartbeatRequest, RegisterDevice, SpendTarget,
+    TokenResponse,
 };
 use warden_desktop_lib::config::Config;
 use warden_desktop_lib::guard::Guard;
@@ -362,16 +363,24 @@ async fn drain_loop_charges_locks_and_stops() {
     std::fs::remove_dir_all(data_dir).ok();
 }
 
-/// The "No account" path of Google sign-in: a brand-new account with no devices is deleted, and
-/// its refresh token dies with it. A fresh anonymous user stands in for the new Google user.
+/// The "No account" path of Google sign-in, on a fresh anonymous user with no devices.
+/// 1. As GoTrue returns it (anonymous: no identities) it must be KEPT: only an account a Google
+///    sign-in just created may be deleted.
+/// 2. With a Google identity made at the same moment as the account (what an unknown Google
+///    account's sign-in returns) it is deleted, and its refresh token dies with it.
 #[tokio::test]
 #[ignore = "talks to staging"]
 async fn new_empty_account_is_deleted() {
     let api = api();
-    let tokens = anonymous_user(&api).await;
+    let mut tokens = anonymous_user(&api).await;
     assert!(tokens.user.created_at.is_some(), "GoTrue sends user.created_at");
     assert!(api.any_device(&tokens.access_token).await.expect("devices read").is_empty());
 
+    let kept = screen_google_sign_in(&api, &tokens, now_secs()).await.expect("screen anonymous");
+    assert_eq!(kept, Screened::Kept, "an anonymous account (no Google identity) is never deleted");
+
+    tokens.user.identities =
+        Some(vec![AuthIdentity { provider: Some("google".into()), created_at: tokens.user.created_at.clone() }]);
     let screened = screen_google_sign_in(&api, &tokens, now_secs()).await.expect("screen");
     assert_eq!(screened, Screened::Deleted);
 

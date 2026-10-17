@@ -11,8 +11,8 @@ session token (`Authorization: Bearer ...`). Tokens are kept in the OS keychain 
 |---|---|---|
 | Google sign-in (browser) | `GET /auth/v1/authorize` | `provider=google`, `redirect_to=warden://auth-callback`, `code_challenge` (SHA-256 of a random secret), `code_challenge_method=s256` |
 | Google sign-in returns | `POST /auth/v1/token?grant_type=pkce` | `auth_code` (from the redirect), `code_verifier` (the random secret) |
-| Google sign-in, only if the account is under 10 minutes old (`user.created_at` from the sign-in) | `GET /rest/v1/devices?select=id,platform&limit=1` | nothing (reads whether the account has any device; you only see your own) |
-| Google sign-in, only if that account is under 10 minutes old AND has no device: the empty account Google sign-in just made (accounts are made on the phone) | `POST /functions/v1/delete-account` | nothing (deletes the signed-in account itself; never called for an account that has a device or is older than 10 minutes) |
+| Google sign-in, only if the account is under 10 minutes old and its only identity is the Google one, made with the account (`user.created_at`, `user.identities` from the sign-in) | `GET /rest/v1/devices?select=id,platform&limit=1` | nothing (reads whether the account has any device; you only see your own) |
+| Google sign-in, only if that account is under 10 minutes old, has no device, and has exactly one identity (Google, made within 5 s of the account): the empty account Google sign-in just made (accounts are made on the phone) | `POST /functions/v1/delete-account` | nothing (deletes the signed-in account itself; never called for an account that has a device, is older than 10 minutes, or linked Google after it was made) |
 | "Use another account" (after "No Warden account") | `GET /auth/v1/authorize` | same as Google sign-in, plus `prompt=select_account` (passed on to Google so it shows its account chooser) |
 | Email sign-in | `POST /auth/v1/otp` | `email`, `create_user: false` |
 | Email code | `POST /auth/v1/verify` | `type: "email"`, `email`, `token` (the 6-digit code) |

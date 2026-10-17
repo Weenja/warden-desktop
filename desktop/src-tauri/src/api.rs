@@ -64,6 +64,19 @@ pub struct AuthUser {
     /// When the account was made (RFC 3339, UTC). Used once, right after a Google sign-in, to
     /// spot an account that the sign-in itself just created (see `new_account.rs`).
     pub created_at: Option<String>,
+    /// The sign-in methods linked to the account. Read with `created_at` to tell an account
+    /// this Google sign-in created from one that linked Google later (see `new_account.rs`).
+    #[serde(default)]
+    pub identities: Option<Vec<AuthIdentity>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthIdentity {
+    #[serde(default)]
+    pub provider: Option<String>,
+    /// When this sign-in method was linked (RFC 3339).
+    #[serde(default)]
+    pub created_at: Option<String>,
 }
 
 // ---------- Device, wallet and block list types ----------
