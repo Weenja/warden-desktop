@@ -24,7 +24,8 @@ pub const STATE_EVENT: &str = "state-changed";
 /// Event telling the sign-in window how a browser sign-in ended.
 pub const AUTH_EVENT: &str = "auth-result";
 
-/// Where "Get Warden for your phone" goes. Fixed here, so the UI cannot open other URLs.
+/// Where "getwarden.app" on the sign-in window goes. Fixed here, so the UI cannot open other URLs.
+/// `scripts/make-qr.py` reads this line for the QR code, so both always point to the same place.
 const GET_WARDEN_URL: &str = "https://getwarden.app";
 
 #[derive(Clone, serde::Serialize)]
@@ -54,7 +55,7 @@ pub fn sign_in_google(app: AppHandle, state: State<'_, AppState>, select_account
     app.opener().open_url(url.as_str(), None::<&str>).map_err(|_| "Could not open your browser.".to_string())
 }
 
-/// "Get Warden for your phone": the website, in the user's browser.
+/// "getwarden.app" under the QR code: the website, in the user's browser.
 #[tauri::command]
 pub fn open_get_warden(app: AppHandle) -> Result<(), String> {
     app.opener().open_url(GET_WARDEN_URL, None::<&str>).map_err(|_| "Could not open your browser.".to_string())

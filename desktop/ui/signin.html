@@ -12,7 +12,7 @@
 <svg class="sprite" aria-hidden="true">
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
     <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
-    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M14 14h.01M20 14h.01M17 17h.01M14 20h.01M20 20h.01"/></symbol>
     <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
     <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
@@ -30,7 +30,13 @@
     <button class="btn btn--block btn--google" id="google"><span class="glyph-g">G</span><span>Continue with Google</span></button>
     <button class="btn btn--block btn--outline" id="use-email"><svg class="ico"><use href="#i-mail"/></svg><span>Email me a code</span></button>
     <p class="form-error" id="start-error" role="alert" hidden></p>
-    <p class="panel__foot inline-ico"><svg class="ico"><use href="#i-phone"/></svg>No account? Get Warden on your phone first.</p>
+    <p class="panel__foot">No account? <button class="link" type="button" id="show-qr" aria-expanded="false" aria-controls="start-qr"><svg class="ico"><use href="#i-qr"/></svg>Get Warden on your phone</button></p>
+    <!-- Scan to get the phone app. The QR code is a static file made by scripts/make-qr.py. -->
+    <div class="qr-card" id="start-qr" hidden>
+      <img class="qr-card__code" src="/get-warden-qr.svg" alt="QR code for getwarden.app">
+      <p class="qr-card__hint">Scan with your phone's camera</p>
+      <button class="qr-card__site" type="button" data-get-warden>getwarden.app</button>
+    </div>
   </section>
 
   <!-- Google account with no Warden account. Accounts are made on the phone; the empty account
@@ -39,8 +45,13 @@
     <img class="moa panel__moa" src="/mochi/worried.webp" alt="MOA">
     <h1 class="panel__title no-account__title">No Warden account for <span id="no-account-email"></span></h1>
     <p class="panel__lead">Set up Warden on your phone first. Then sign in here with the same Google account.</p>
+    <!-- Scan to get the phone app. The QR code is a static file made by scripts/make-qr.py. -->
+    <div class="qr-card" id="no-account-qr">
+      <img class="qr-card__code" src="/get-warden-qr.svg" alt="QR code for getwarden.app">
+      <p class="qr-card__hint">Scan with your phone's camera</p>
+      <button class="qr-card__site" type="button" data-get-warden>getwarden.app</button>
+    </div>
     <button class="btn btn--block btn--google" id="google-other"><span class="glyph-g">G</span><span>Use another account</span></button>
-    <button class="btn btn--block btn--outline" id="get-warden"><svg class="ico"><use href="#i-phone"/></svg><span>Get Warden for your phone</span></button>
     <p class="form-error" id="no-account-error" role="alert" hidden></p>
   </section>
 

@@ -59,8 +59,36 @@ googleButton("#google", "#start-error", false);
 // "Use another account": Google shows its account chooser instead of the signed-in account.
 googleButton("#google-other", "#no-account-error", true);
 
-$("#get-warden").addEventListener("click", () => {
-  core.openGetWarden().catch((e: unknown) => setError("#no-account-error", errorText(e)));
+// "getwarden.app" under each QR code opens the site in the browser. The core fixes the URL.
+document.querySelectorAll<HTMLElement>("[data-get-warden]").forEach((link) =>
+  link.addEventListener("click", () => {
+    const errorId = link.closest("#view-start") ? "#start-error" : "#no-account-error";
+    core.openGetWarden().catch((e: unknown) => setError(errorId, errorText(e)));
+  }),
+);
+
+// "No account? Get Warden on your phone" opens the QR card under it; a second click closes it.
+const qrToggle = $<HTMLButtonElement>("#show-qr");
+const qrCard = $("#start-qr");
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+function setQrOpen(open: boolean): void {
+  qrToggle.setAttribute("aria-expanded", String(open));
+  qrCard.classList.remove("is-opening", "is-closing");
+  if (open) {
+    qrCard.hidden = false;
+    qrCard.classList.add("is-opening");
+  } else if (reducedMotion.matches) {
+    qrCard.hidden = true;
+  } else {
+    // Fade out first, then hide, so the window shrinks after the card is gone.
+    qrCard.classList.add("is-closing");
+  }
+}
+qrToggle.addEventListener("click", () => setQrOpen(qrToggle.getAttribute("aria-expanded") !== "true"));
+qrCard.addEventListener("animationend", () => {
+  if (qrCard.classList.contains("is-closing")) qrCard.hidden = true;
+  qrCard.classList.remove("is-opening", "is-closing");
 });
 
 void core.onAuthResult((result) => {
