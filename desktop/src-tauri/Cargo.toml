@@ -39,6 +39,25 @@ reqwest = { version = "0.13", default-features = false, features = ["json", "rus
 
 [target.'cfg(windows)'.dependencies]
 reqwest = { version = "0.13", default-features = false, features = ["json", "native-tls", "http2", "query"] }
+# Win32 for the platform layer (front app, closing apps, Start menu, icons, lock state) and
+# window placement. Same major version as Tauri's own, so window handles are the same type.
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Environment",
+    "Win32_System_RemoteDesktop",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+# Uninstall keys for the app picker (read only).
+windows-registry = "0.6"
+# Encodes app icons as PNG for the picker.
+png = "0.18"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"

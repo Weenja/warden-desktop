@@ -5155,6 +5155,7 @@ dependencies = [
  "objc2-core-graphics",
  "objc2-foundation",
  "objc2-system-configuration",
+ "png 0.18.1",
  "rand 0.9.5",
  "reqwest",
  "serde",
@@ -5169,6 +5170,8 @@ dependencies = [
  "tokio",
  "url",
  "uuid",
+ "windows",
+ "windows-registry",
 ]
 
 [[package]]
