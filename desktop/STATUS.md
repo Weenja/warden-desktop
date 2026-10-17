@@ -1,6 +1,6 @@
 # Warden desktop — status
 
-Updated 2026-10-17 (builder 1: foundation). Staging build by default: "Warden β", `in.weenja.warden.desktop.staging`.
+Updated 2026-10-17 (builder 1: foundation; builder 2: macOS drain, pill, shield, picker, quit, autostart). Staging build by default: "Warden β", `in.weenja.warden.desktop.staging`.
 
 ## Works
 - Tauri v2 tray-only app: no Dock icon (`LSUIElement` + `ActivationPolicy::Accessory`), MOA template icon in the menu bar, popover under the icon (hides on blur), single instance, strict CSP, per-window capabilities (`src-tauri/capabilities/`).
@@ -40,13 +40,22 @@ cd .. && npx tsc --noEmit
 ```
 TLS: rustls on macOS; SChannel (native-tls) on Windows, because rustls' crypto (aws-lc / ring) needs a Windows C toolchain to cross-check.
 
-## For builder 2 (drain, pill, shield, picker, quit, autostart)
-- Add `drain.rs` (pure logic + tests) and a drain task started in `lib.rs::start`. Inputs: `state.sync.platform().frontmost_app()`, `.screen_locked()`, `sync.guarded_apps()` (token = bundle id, `id` = target id), `sync.guarded_sites()` + `platform::KNOWN_BROWSERS` (no extension yet: a known browser in front drains while sites are guarded), `sync.balance()` (claims: balance_seconds, exp). Charge with `sync.spend_tick(&SpendTarget::Target(id) | Site(host), seconds, evidence)`; reuse the evidence on retry.
-- Extend `sync::UiState` (+ `ui/src/core.ts`) with what is draining; the popover's "Nothing draining" row (`#now`) and `#mood` are ready for it.
-- Picker: `sync.platform().installed_apps()` (slow, off the main thread) and `sync.set_guarded_apps(&[GuardedItem])`. Add an "Edit" link to the popover's "Guarded on this Mac" head (design has it).
-- Quit confirm: `quit_warden` already tells the crew; put the confirm window in front of it.
-- Autostart: add the "Open at login" row to `linked.html` (in the mockup) when it works.
-- New window = new page in `ui/`, new input in `vite.config.ts`, a capability file, and its commands in `build.rs`.
+## Drain, pill, shield (builder 2, macOS)
+- `drain.rs`: pure rules mirroring Android GuardCore (14 unit tests): guarded app in front drains; a known browser drains whole while sites are guarded (tick with no target and no site, as Android); locked screen / sleep / nothing in front = no drain; local countdown from the balance token; ticks every 30 s of use, at once on target change and at zero; evidence `d<start ms>.<seq>`, reused on retry; refused 4xx dropped; low toast once at <=10 pts (re-arms at 12); lock at local 0, token expiry (offline) or a server shield with points left (daily max, until the day key changes).
+- `guard.rs`: 1 s poll through `Platform`, gap > 2 s not counted, ticks in the background (retry after 5 s). Warden's own windows in front keep the app under them for 30 s (popover shows "Steam on this Mac"). Shield "Close" steps aside 10 s so the app can quit or ask to save.
+- `placement/`: the only OS window code. macOS (`placement/macos.rs`): pill, shield, toast are NSPanels (tauri-nspanel 2.1): non-activating, all Spaces + full-screen apps. Pill level 27 (above the menu bar), centred on the notch (`auxiliaryTopLeft/RightArea`), height = `safeAreaInsets.top`; no notch: top centre of the menu bar. Shield: ModalPanel level, screen minus the menu bar, key window without activating Warden (the locked app gets no keys, stays frontmost). The screen is the one with the frontmost app's front window (CGWindowList bounds only, no permission). `pill()`, `shield()`, `toast()` also show the window; never call `show()` on them.
+- Windows: pill, shield, toast, picker, quit pages + capabilities; popover "Edit" (picker) and Quit (asks first); "Open at login" row on the linked screen (tauri-plugin-autostart, LaunchAgent; turned on at sign-in in release builds).
+
+## Staging results, drain loop (2026-10-17, fake Mac with a scripted front app, 10 s per poll)
+- add_points 12 -> 720 s, multiplier 1. Steam 90 s -> 3 ticks, server 720 -> 630. Chrome 30 s with a guarded site -> whole-browser tick accepted, 630 -> 600.
+- Low toast once at 650 s (10 pts). Steam to zero: 60 polls (600 s), shield (zero), pill locked, server balance 0.
+- Finder in front: shield and pill gone, nothing charged. Steam again: shield back.
+
+## Not tested on a screen (no screen-recording permission in the build shell)
+Pill at the notch / no-notch screen, hover via the panel tracking area, panels over full-screen apps and on other Spaces, shield taking the keyboard, picker with real icons, login item. UI checked in headless Chrome (dark + light) with fake data only.
+
+## Merge note (Windows branch)
+`placement/mod.rs` here also has `toast()`, `pill_metrics()` / `PillMetrics`, the shared `popover_near_icon()` and a `generic` fallback (non-mac); keep them when merging builder 3's mod.rs, and keep `placement/macos.rs` as is.
 
 ## For builder 3 (Windows)
 - Fill `src-tauri/src/platform/windows.rs` (the trait in `platform/mod.rs`). The tray/popover placement already flips above the icon when the tray is at the bottom.
