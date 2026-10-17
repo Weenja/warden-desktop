@@ -6,7 +6,7 @@ Updated 2026-10-17 (builder 1: foundation; builder 2: macOS drain, pill, shield,
 - Tauri v2 tray-only app: no Dock icon (`LSUIElement` + `ActivationPolicy::Accessory`), MOA template icon in the menu bar, popover under the icon (hides on blur), single instance, strict CSP, per-window capabilities (`src-tauri/capabilities/`).
 - UI ported from `mockups/desktop/` with OS light/dark: sign-in (Google + email code; Apple hidden), "This Mac is linked", popover (balance, battery, guarded apps, sites, browsers, crew line, Quit). Alignment fixes are marked `fix:` in `ui/styles/ui.css`.
 - Rust core: `api.rs` (typed requests, 20 s timeout), `auth.rs` (PKCE + `warden://auth-callback` deep link, email OTP), `session.rs` (keychain, refresh 2 min before expiry, single-flight, rotation saved before use), `sync.rs` (register_device, heartbeat every 60 s and on wake/unlock, block list, crew, balance-token decode, `spend_tick`, `set_guarded_apps`).
-- `platform/macos.rs`: frontmost app, polite terminate, installed apps with 64 px PNG icons, screen locked, computer name. `platform/windows.rs` is a compiling skeleton.
+- `platform/macos.rs`: frontmost app, polite terminate, installed apps with 64 px PNG icons, screen locked, computer name. `platform/windows.rs`: see the Windows section.
 - Quit sends a last heartbeat with `stopped_at` (5 s cap), then exits.
 
 ## Staging results (2026-10-17, fresh anonymous user each run)
@@ -57,9 +57,21 @@ Pill at the notch / no-notch screen, hover via the panel tracking area, panels o
 ## Merge note (Windows branch)
 `placement/mod.rs` here also has `toast()`, `pill_metrics()` / `PillMetrics`, the shared `popover_near_icon()` and a `generic` fallback (non-mac); keep them when merging builder 3's mod.rs, and keep `placement/macos.rs` as is.
 
-## For builder 3 (Windows)
-- Fill `src-tauri/src/platform/windows.rs` (the trait in `platform/mod.rs`). The tray/popover placement already flips above the icon when the tray is at the bottom.
-- Deep link: `register_all()` runs in Windows debug builds; installers register `warden://` from `tauri.conf.json`.
+## Windows (builder 3, branch `windows`)
+Done, compiles (`cargo check` + `clippy -D warnings` for x86_64-pc-windows-msvc) and links (`cargo xwin build --target x86_64-pc-windows-msvc` -> debug `warden-desktop.exe`; cargo-xwin downloads the MSVC CRT + Windows SDK and accepts Microsoft's licence without a prompt). NOT run on Windows yet:
+- `platform/windows.rs`: front app = foreground window's exe (`steam.exe`, lowercase), name = exe FileDescription, else the exe name; Store apps resolved through ApplicationFrameHost's child window; Warden's own windows count as nothing in front. `terminate_app`: WM_CLOSE to the app's visible top-level windows, then TerminateProcess after 5 s (known browsers are only asked: tabs). Lock = WTS session flag. Name = GetComputerNameExW (DNS host name).
+- `platform/windows/apps.rs` + `icon.rs`: picker = Start-menu shortcuts (all users + this user; Squirrel `Update.exe --processStart X.exe` → `x.exe`) then Uninstall keys' DisplayIcon exe; installers/uninstallers dropped; deduped by exe; 64 px PNG icons (shortcut icon location, else the exe).
+- `platform::KNOWN_BROWSERS` is per OS now (`MACOS_BROWSERS`, `WINDOWS_BROWSERS`).
+- `placement/{mod,windows,macos,taskbar}.rs`: the shared interface. Windows `pill()` also SHOWS the pill (a plain `show()` would take focus): not focusable + tool window + topmost, top centre of the primary work area; create the pill window `transparent(true)`, `decorations(false)`, `focused(false)`. `shield()` covers the work area of the foreground window's monitor (taskbar stays). `popover()` opens from whichever edge the taskbar is on. `placement/macos.rs` is a stand-in: keep main's at merge.
+- Tray: colour MOA-blue mochi (`icons/tray-color.png`, staging; prod needs the cream mochi). Installer: NSIS per user (`installMode: currentUser`, no admin), WebView2 bootstrapper; `warden://` is registered by the installer from the deep-link config. Autostart with tauri-plugin-autostart writes HKCU Run on Windows, so it is per user too (nothing Windows-specific to add).
+
+Needs a real Windows PC:
+- Front app ids for: Steam, Chrome/Edge, a Store app (Netflix/Photos), an elevated app (should still work: limited query rights).
+- Close: Notepad with unsaved text (WM_CLOSE asks; ended after 5 s), a tray-only app, a browser (asked only).
+- Picker list and icons look right (Office "advertised" shortcuts may be missing; check Discord/Slack ids).
+- Lock state flips on Win+L; device name matches Settings > About.
+- Pill: does not take focus from the app in front, not in Alt+Tab, no taskbar button, transparent corners. Popover with the taskbar on each edge and at 150 %/200 % scaling. Shield leaves the taskbar visible.
+- NSIS installer: installs without admin, `warden://auth-callback` opens the running app (single instance), Google sign-in end to end.
 
 ## Left
 - Prod config (`config/prod.json`, identifier `in.weenja.warden.desktop`) waits for Jojo's approval.

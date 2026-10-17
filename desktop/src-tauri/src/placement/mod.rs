@@ -8,7 +8,9 @@
 //! - `toast`: the one-time low battery note, top right.
 
 use serde::Serialize;
-use tauri::{PhysicalPosition, Rect, WebviewWindow};
+#[cfg(target_os = "macos")]
+use tauri::PhysicalPosition;
+use tauri::{Rect, WebviewWindow};
 
 #[cfg(target_os = "macos")]
 mod macos;
@@ -18,6 +20,10 @@ use macos as os;
 mod windows;
 #[cfg(windows)]
 use windows as os;
+
+/// Pure taskbar/flyout geometry, used by `windows.rs` and unit-tested on every OS.
+#[cfg(any(windows, test))]
+mod taskbar;
 
 /// Size the pill window to `width` x `height` (logical px), pin it to the top of the screen and
 /// show it without taking focus. Callers never call `show()` on the pill, shield or toast: a
@@ -62,11 +68,13 @@ pub fn pill_metrics(win: &WebviewWindow) -> PillMetrics {
     }
 }
 
-/// Gap between the menu bar / taskbar and the popover, in logical pixels.
+/// Gap between the menu bar and the popover, in logical pixels.
+#[cfg(target_os = "macos")]
 const POPOVER_GAP: f64 = 6.0;
 
-/// Centre the popover on the icon. Below it when the icon is at the top of the screen (macOS
-/// menu bar), above it when at the bottom (Windows taskbar). Kept inside the screen.
+/// Centre the popover on the menu bar icon (below it; above it if the icon is ever at the
+/// bottom), kept inside the screen. Windows uses the tray flyout math in `taskbar.rs`.
+#[cfg(target_os = "macos")]
 fn popover_near_icon(win: &WebviewWindow, icon: Rect) -> tauri::Result<()> {
     let scale = win.scale_factor()?;
     let pos = icon.position.to_physical::<f64>(scale);
@@ -87,10 +95,11 @@ fn popover_near_icon(win: &WebviewWindow, icon: Rect) -> tauri::Result<()> {
     win.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32))
 }
 
-/// Placement with Tauri's own monitor API, for OS code that has nothing better yet.
+/// Placement with Tauri's own monitor API, for windows that need no OS-specific code (the
+/// low battery toast on Windows).
 #[cfg(not(target_os = "macos"))]
 mod generic {
-    use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
+    use tauri::{LogicalPosition, WebviewWindow};
 
     /// Inset of the toast from the screen corner, in logical px.
     const TOAST_MARGIN: f64 = 12.0;
@@ -103,20 +112,6 @@ mod generic {
         let pos = m.position().to_logical::<f64>(m.scale_factor());
         let size = m.size().to_logical::<f64>(m.scale_factor());
         Ok((pos.x, pos.y, size.width, size.height))
-    }
-
-    pub fn pill(win: &WebviewWindow, width: f64, height: f64) -> tauri::Result<()> {
-        let (x, y, w, _) = monitor(win)?;
-        win.set_size(LogicalSize::new(width, height))?;
-        win.set_position(LogicalPosition::new(x + (w - width) / 2.0, y))?;
-        win.show()
-    }
-
-    pub fn shield(win: &WebviewWindow) -> tauri::Result<()> {
-        let (x, y, w, h) = monitor(win)?;
-        win.set_size(LogicalSize::new(w, h))?;
-        win.set_position(LogicalPosition::new(x, y))?;
-        win.show()
     }
 
     pub fn toast(win: &WebviewWindow) -> tauri::Result<()> {

@@ -9,6 +9,12 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
+// Windows helpers without Win32: compiled for Windows, and for tests on every OS.
+#[cfg(any(target_os = "windows", test))]
+mod exe_names;
+#[cfg(any(target_os = "windows", test))]
+mod icon_pixels;
+
 /// The app in front. `id` is the stable key stored in the block list: the bundle id on macOS
 /// (`com.valvesoftware.steam`), the exe file name on Windows (`steam.exe`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -62,10 +68,16 @@ pub fn device_platform() -> crate::api::DevicePlatform {
     return crate::api::DevicePlatform::Macos;
 }
 
-/// Browsers Warden knows (macOS bundle ids and Windows exe names). While the user has guarded
-/// sites, a browser without the Warden extension drains the whole time it is in front, because
-/// Warden cannot see which site is open in it.
-pub const KNOWN_BROWSERS: &[&str] = &[
+/// Browsers Warden knows on this OS. While the user has guarded sites, a browser without the
+/// Warden extension drains the whole time it is in front, because Warden cannot see which
+/// site is open in it.
+#[cfg(target_os = "macos")]
+pub const KNOWN_BROWSERS: &[&str] = MACOS_BROWSERS;
+#[cfg(target_os = "windows")]
+pub const KNOWN_BROWSERS: &[&str] = WINDOWS_BROWSERS;
+
+/// macOS bundle ids.
+pub const MACOS_BROWSERS: &[&str] = &[
     "com.apple.Safari",
     "com.google.Chrome",
     "org.mozilla.firefox",
@@ -74,10 +86,34 @@ pub const KNOWN_BROWSERS: &[&str] = &[
     "com.brave.Browser",
     "com.operasoftware.Opera",
     "com.vivaldi.Vivaldi",
+];
+
+/// Windows exe names, lowercase like every Windows app id. Opera GX runs as opera.exe.
+pub const WINDOWS_BROWSERS: &[&str] = &[
     "chrome.exe",
     "msedge.exe",
     "firefox.exe",
     "brave.exe",
     "opera.exe",
     "vivaldi.exe",
+    "arc.exe",
+    "chromium.exe",
+    "librewolf.exe",
+    "waterfox.exe",
+    "floorp.exe",
+    "zen.exe",
+    "thorium.exe",
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn windows_browsers_are_written_as_app_ids() {
+        // A capital letter or a missing .exe would never match the app in front.
+        for browser in WINDOWS_BROWSERS {
+            assert_eq!(exe_names::exe_id(browser).as_deref(), Some(*browser));
+        }
+    }
+}
