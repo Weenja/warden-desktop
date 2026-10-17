@@ -20,3 +20,4 @@
 
 /* Blocked page fills the tab. */
 html:has(.blocked-page),.blocked-page{height:100%}
+.perms code{word-break:break-all}
