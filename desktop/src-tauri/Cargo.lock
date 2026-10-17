@@ -5267,6 +5267,7 @@ dependencies = [
  "base64 0.22.1",
  "env_logger",
  "keyring",
+ "libc",
  "log",
  "objc2",
  "objc2-app-kit",

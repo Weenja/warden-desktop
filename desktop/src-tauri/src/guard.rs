@@ -1,7 +1,7 @@
 //! The drain loop: once a second it asks the OS which app is in front, runs the drain rules
 //! ([`crate::drain`]), sends spend ticks in the background, and tells the UI what to show
 //! (pill, shield, low toast). No Tauri in here, so the staging test runs this same loop with a
-//! scripted fake [`Platform`](crate::platform::Platform).
+//! scripted fake [`Platform`](crate::platform::Platform) and a fake browser extension.
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -10,6 +10,7 @@ use serde::Serialize;
 use tokio::task::JoinHandle;
 
 use crate::api::ApiError;
+use crate::browser_ext::link::Links;
 use crate::drain::{Drain, DrainKind, Guarded, Inputs, LockReason, Step};
 use crate::platform::FrontApp;
 use crate::session::now_secs;
@@ -28,6 +29,10 @@ const OWN_WINDOW_GRACE: Duration = Duration::from_secs(30);
 /// After "Close <app>" on the shield, the shield steps aside this long so the app can quit or
 /// ask to save documents. If it is still in front after that, the shield comes back.
 const CLOSE_GRACE: Duration = Duration::from_secs(10);
+/// Locked on a guarded site, the extension shows its blocked page by itself. If the site is
+/// still open after this long (an older extension, a page it could not replace), Warden asks
+/// the extension to close the tab.
+const CLOSE_TAB_AFTER: Duration = Duration::from_secs(3);
 
 /// The pill: what drains and how much is left.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -41,7 +46,8 @@ pub struct DrainView {
     pub per_minute: i64,
     /// 10 points or less: amber.
     pub low: bool,
-    /// Locked: coral, the shield is up.
+    /// Locked: coral. The shield is up over an app or a whole browser; on a site the
+    /// extension blocks it.
     pub locked: bool,
 }
 
@@ -61,6 +67,8 @@ pub struct GuardView {
     pub balance_seconds: Option<i64>,
     pub drain: Option<DrainView>,
     pub shield: Option<ShieldView>,
+    /// Guarded things are blocked now (zero, offline too long, daily max), whatever is in front.
+    pub locked: bool,
 }
 
 /// One poll's result for the UI.
@@ -83,11 +91,15 @@ struct State {
     pill_hidden_for: Option<String>,
     /// "Close <app>" was clicked on the shield: (app id, until).
     closing: Option<(String, Instant)>,
+    /// Locked with a guarded site open: (browser, site, since, close_tab sent).
+    locked_site: Option<(String, String, Instant, bool)>,
     view: GuardView,
 }
 
 pub struct Guard {
     sync: Arc<SyncService>,
+    /// Linked browser extensions: which site is open in each browser.
+    links: Arc<Links>,
     /// Warden's own app id: Warden in front is not "another app".
     own_id: String,
     state: Mutex<State>,
@@ -95,7 +107,7 @@ pub struct Guard {
 }
 
 impl Guard {
-    pub fn new(sync: Arc<SyncService>, own_id: &str) -> Arc<Guard> {
+    pub fn new(sync: Arc<SyncService>, links: Arc<Links>, own_id: &str) -> Arc<Guard> {
         // Evidence keys are `d<start ms>.<seq>`: unique per run and per tick. The server adds
         // the device id in front, so two computers never collide.
         let started_ms = std::time::SystemTime::now()
@@ -104,6 +116,7 @@ impl Guard {
             .unwrap_or_default();
         Arc::new(Guard {
             sync,
+            links,
             own_id: own_id.to_string(),
             state: Mutex::new(State {
                 drain: Drain::new(format!("d{started_ms}")),
@@ -112,6 +125,7 @@ impl Guard {
                 retry_at: None,
                 pill_hidden_for: None,
                 closing: None,
+                locked_site: None,
                 view: GuardView::default(),
             }),
             tick_task: Mutex::new(None),
@@ -143,16 +157,18 @@ impl Guard {
         // A locked screen counts as nothing in front, whatever app sits under the lock screen.
         let front = if platform.screen_locked() { None } else { platform.frontmost_app() };
         let guarded_apps = self.sync.guarded_for_drain();
-        let sites_guarded = !self.sync.guarded_sites().is_empty();
+        let guarded_sites: Vec<String> = self.sync.guarded_sites().into_iter().map(|t| t.token).collect();
         let balance = self.sync.balance();
         let now = now_secs();
 
         let mut state = self.state.lock().unwrap();
         let front = self.resolve_front(&mut state, front);
+        let extension = front.as_ref().and_then(|app| self.links.tab_for(&app.id));
         let step = state.drain.step(&Inputs {
             front: front.as_ref(),
             guarded_apps: &guarded_apps,
-            sites_guarded,
+            guarded_sites: &guarded_sites,
+            extension: extension.as_ref(),
             balance: balance.as_ref(),
             now,
             dt,
@@ -161,6 +177,7 @@ impl Guard {
             log::info!("balance reached zero");
         }
         let view = self.build_view(&mut state, &step, now);
+        self.close_locked_site(&mut state, &step);
         let changed = view != state.view;
         state.view = view.clone();
         drop(state);
@@ -190,16 +207,20 @@ impl Guard {
 
     fn build_view(&self, state: &mut State, step: &Step, now: i64) -> GuardView {
         let balance_seconds = state.drain.known().then(|| state.drain.left().max(0.0).floor() as i64);
+        let locked = state.drain.known() && state.drain.lock_reason(now).is_some();
         let Some(front) = &step.front else {
             state.pill_hidden_for = None;
-            return GuardView { balance_seconds, drain: None, shield: None };
+            return GuardView { balance_seconds, drain: None, shield: None, locked };
         };
         if state.pill_hidden_for.as_ref().is_some_and(|id| *id != front.app_id) {
             state.pill_hidden_for = None;
         }
         let closing = state.closing.as_ref().is_some_and(|(id, until)| *id == front.app_id && Instant::now() < *until);
+        // A site is blocked by the extension (its blocked page), not by a shield over the browser.
         let shield = match state.drain.lock_reason(now) {
-            Some(reason) if step.locked && !closing => Some(shield_view(front, reason)),
+            Some(reason) if step.locked && !closing && front.kind != DrainKind::Site => {
+                Some(shield_view(front, reason))
+            }
             _ => None,
         };
         // A whole browser's pill can be hidden (it keeps draining); at zero it always shows.
@@ -214,7 +235,27 @@ impl Guard {
             low: state.drain.points() <= crate::drain::LOW_POINTS,
             locked: step.locked,
         });
-        GuardView { balance_seconds, drain, shield }
+        GuardView { balance_seconds, drain, shield, locked }
+    }
+
+    /// Locked while a guarded site stays open for [`CLOSE_TAB_AFTER`]: ask the extension once
+    /// to close that tab.
+    fn close_locked_site(&self, state: &mut State, step: &Step) {
+        let open_site = step.front.as_ref().filter(|f| step.locked && f.kind == DrainKind::Site);
+        let Some(front) = open_site else {
+            state.locked_site = None;
+            return;
+        };
+        let same = state.locked_site.as_ref().is_some_and(|(b, s, _, _)| *b == front.app_id && *s == front.label);
+        if !same {
+            state.locked_site = Some((front.app_id.clone(), front.label.clone(), Instant::now(), false));
+        }
+        if let Some((browser, site, since, sent)) = &mut state.locked_site {
+            if !*sent && since.elapsed() >= CLOSE_TAB_AFTER {
+                self.links.close_tab(browser, site);
+                *sent = true;
+            }
+        }
     }
 
     /// Stop on a whole browser's pill: hide the pill, leave the browser (it keeps draining while

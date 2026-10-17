@@ -79,7 +79,9 @@ function render(state: UiState): void {
   }
   hint.textContent = drain.kind === "browser"
     ? `Stop hides this. ${drain.label} keeps draining while it's in front.`
-    : `Stop closes ${drain.label}.`;
+    : drain.kind === "site"
+      ? `Stop closes the ${drain.label} tab.`
+      : `Stop closes ${drain.label}.`;
   $("#actions").hidden = drain.locked;
   hint.hidden = drain.locked;
 

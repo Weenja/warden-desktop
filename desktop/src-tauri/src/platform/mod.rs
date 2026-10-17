@@ -50,6 +50,42 @@ pub trait Platform: Send + Sync {
     fn device_name(&self) -> String;
 }
 
+/// The process that runs `pid`'s parent, its app id (bundle id on macOS, exe name on Windows)
+/// and its exe file. Used only to check who is on the other end of the browser link.
+#[cfg(target_os = "macos")]
+use macos::{process_app_id, process_exe, process_parent};
+#[cfg(target_os = "windows")]
+use windows::{process_app_id, process_exe, process_parent};
+
+/// True when process `pid` runs this same exe file. The browser link only accepts its own
+/// native host (this binary started by the browser), so another program cannot pose as the
+/// extension and report "no site open".
+pub fn is_this_exe(pid: u32) -> bool {
+    let same = |a: std::path::PathBuf, b: std::path::PathBuf| match (a.canonicalize(), b.canonicalize()) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    };
+    match (process_exe(pid), std::env::current_exe()) {
+        (Some(peer), Ok(me)) => same(peer, me),
+        _ => false,
+    }
+}
+
+/// The known browser that started process `pid`, walking up its parents (Chrome on Windows
+/// starts hosts through cmd.exe). None when no known browser is above it, e.g. the host was
+/// started by hand from a terminal; such a link never changes what drains.
+pub fn browser_ancestor(pid: u32) -> Option<String> {
+    let mut current = pid;
+    // A few levels are enough (browser -> cmd.exe -> host); the cap also stops parent-id loops.
+    for _ in 0..6 {
+        current = process_parent(current).filter(|p| *p > 1 && *p != current)?;
+        if let Some(id) = process_app_id(current).filter(|id| KNOWN_BROWSERS.contains(&id.as_str())) {
+            return Some(id);
+        }
+    }
+    None
+}
+
 /// The implementation for the OS this binary was built for.
 pub fn current() -> Box<dyn Platform> {
     #[cfg(target_os = "macos")]

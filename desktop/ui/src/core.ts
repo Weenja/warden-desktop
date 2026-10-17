@@ -6,8 +6,10 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 export interface GuardedItem { token: string; label: string }
 export interface GuardedAppView { token: string; label: string; icon: string | null }
 export interface LinkedDevice { id: string; name: string }
-export interface Browser { id: string; name: string; icon: string | null }
-export type DrainKind = "app" | "browser";
+/** An installed browser; `extension`: the Warden extension is linked in it. */
+export interface Browser { id: string; name: string; icon: string | null; extension: boolean }
+/** "site": a guarded site in a browser with the Warden extension (label = the site). */
+export type DrainKind = "app" | "browser" | "site";
 /** Mirrors `guard::DrainView`: what the pill shows. */
 export interface DrainView {
   app_id: string;

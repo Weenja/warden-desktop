@@ -71,8 +71,9 @@ function renderBrowsers(state: UiState): void {
       name.className = "row__text";
       name.textContent = browser.name;
       const status = document.createElement("span");
-      status.className = "status status--warn";
-      status.textContent = "No extension";
+      status.className = browser.extension ? "status status--ok" : "status status--warn";
+      if (browser.extension) status.append(icon("check"));
+      status.append(browser.extension ? "Linked" : "No extension");
       row.append(appTile(browser.name, browser.icon, "sm"), name, status);
       return row;
     }),

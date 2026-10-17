@@ -105,6 +105,18 @@ pub fn toggle_popover(app: &AppHandle, icon: Rect) -> tauri::Result<()> {
     win.set_focus()
 }
 
+/// "Open Warden" from the browser extension: the popover under the tray icon.
+pub fn open_popover(app: &AppHandle) -> tauri::Result<()> {
+    let (Some(win), Some(tray)) = (app.get_webview_window(POPOVER), app.tray_by_id(crate::tray::ID)) else {
+        return Ok(());
+    };
+    if let Some(icon) = tray.rect()? {
+        placement::popover(&win, icon)?;
+    }
+    win.show()?;
+    win.set_focus()
+}
+
 /// A borderless, transparent window that floats and never shows in the taskbar.
 fn floating(app: &AppHandle, label: &str, page: &str, width: f64, height: f64) -> tauri::Result<WebviewWindow> {
     WebviewWindowBuilder::new(app, label, WebviewUrl::App(page.into()))

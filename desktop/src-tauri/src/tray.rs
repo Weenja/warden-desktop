@@ -15,8 +15,11 @@ const ICON: &[u8] = include_bytes!("../icons/tray-template@2x.png");
 #[cfg(target_os = "windows")]
 const ICON: &[u8] = include_bytes!("../icons/tray-color.png");
 
+/// The tray icon's id, to find it again (the popover opens under it).
+pub const ID: &str = "warden";
+
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
-    TrayIconBuilder::with_id("warden")
+    TrayIconBuilder::with_id(ID)
         .icon(Image::from_bytes(ICON)?)
         .icon_as_template(cfg!(target_os = "macos"))
         .tooltip("Warden")

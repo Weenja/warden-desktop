@@ -1,8 +1,11 @@
 //! The drain rules, free of the OS and the network so they can be tested. Mirrors Android's
 //! `GuardCore` (warden-prd `apps/android/platform/.../GuardCore.kt`).
 //!
-//! - A guarded app in front drains. A known browser in front drains whole while the user has
-//!   guarded sites, because without the Warden extension we cannot see which site is open.
+//! - A guarded app in front drains.
+//! - A known browser in front WITH the Warden extension linked drains only while its active tab
+//!   is on a guarded site and the user is not idle; the tick names the site's host.
+//! - A known browser WITHOUT the extension drains whole while the user has guarded sites,
+//!   because Warden cannot see which site is open in it.
 //! - Nothing in front (screen locked, asleep, login window) drains nothing.
 //! - The balance shown is optimistic: the server's last balance minus what was used here and not
 //!   charged yet. Used seconds are sent as spend ticks: every 30 s of use, at once when the app
@@ -16,6 +19,7 @@
 use serde::Serialize;
 
 use crate::api::SpendTarget;
+use crate::browser_ext::link::TabReport;
 use crate::platform::{FrontApp, KNOWN_BROWSERS};
 use crate::sync::BalanceClaims;
 
@@ -47,6 +51,8 @@ pub enum DrainKind {
     App,
     /// A whole browser: guarded sites exist and the browser has no Warden extension.
     Browser,
+    /// A guarded site in a browser with the Warden extension. The label is the guarded site.
+    Site,
 }
 
 /// The guarded thing in front.
@@ -63,7 +69,11 @@ pub struct Inputs<'a> {
     /// The app in front. None while the screen is locked, the Mac sleeps, or nothing has focus.
     pub front: Option<&'a FrontApp>,
     pub guarded_apps: &'a [GuardedApp],
-    pub sites_guarded: bool,
+    /// Guarded sites from the phone, e.g. "youtube.com".
+    pub guarded_sites: &'a [String],
+    /// What the Warden extension in the browser in front reports. None when that browser has no
+    /// linked extension (or the app in front is not a browser).
+    pub extension: Option<&'a TabReport>,
     /// The latest balance token claims. None until the first sync (or after sign-out).
     pub balance: Option<&'a BalanceClaims>,
     /// Wall clock, seconds since the Unix epoch, for the token expiry.
@@ -186,7 +196,9 @@ impl Drain {
 
     pub fn step(&mut self, inputs: &Inputs) -> Step {
         self.anchor(inputs.balance);
-        let front = inputs.front.and_then(|app| guarded_in_front(app, inputs.guarded_apps, inputs.sites_guarded));
+        let front = inputs
+            .front
+            .and_then(|app| guarded_in_front(app, inputs.guarded_apps, inputs.guarded_sites, inputs.extension));
         if !self.known() {
             // Signed out or not synced yet: nothing to count against, so nothing drains or locks.
             self.current = None;
@@ -285,9 +297,15 @@ impl Drain {
     }
 }
 
-/// Which guarded thing `app` is, if any. A guarded app wins over the whole-browser rule, so a
-/// browser the user picked as an app is charged as that app.
-pub fn guarded_in_front(app: &FrontApp, guarded_apps: &[GuardedApp], sites_guarded: bool) -> Option<Guarded> {
+/// Which guarded thing `app` is, if any. A guarded app wins over the browser rules, so a
+/// browser the user picked as an app is charged as that app. For a browser, `extension` is what
+/// its linked Warden extension reports (None = no extension: the whole browser drains).
+pub fn guarded_in_front(
+    app: &FrontApp,
+    guarded_apps: &[GuardedApp],
+    guarded_sites: &[String],
+    extension: Option<&TabReport>,
+) -> Option<Guarded> {
     if let Some(g) = guarded_apps.iter().find(|g| g.app_id == app.id) {
         return Some(Guarded {
             app_id: g.app_id.clone(),
@@ -296,7 +314,21 @@ pub fn guarded_in_front(app: &FrontApp, guarded_apps: &[GuardedApp], sites_guard
             charge: SpendTarget::Target(g.target_id.clone()),
         });
     }
-    if sites_guarded && KNOWN_BROWSERS.contains(&app.id.as_str()) {
+    if !KNOWN_BROWSERS.contains(&app.id.as_str()) {
+        return None;
+    }
+    if let Some(tab) = extension {
+        let host = tab.site.as_deref().filter(|_| !tab.idle)?;
+        let site = guarded_site(host, guarded_sites)?;
+        return Some(Guarded {
+            app_id: app.id.clone(),
+            label: site.to_string(),
+            kind: DrainKind::Site,
+            // The host as open (m.youtube.com); the server picks the guarded site it falls under.
+            charge: SpendTarget::Site(host.to_string()),
+        });
+    }
+    if !guarded_sites.is_empty() {
         return Some(Guarded {
             app_id: app.id.clone(),
             label: app.name.clone(),
@@ -305,6 +337,22 @@ pub fn guarded_in_front(app: &FrontApp, guarded_apps: &[GuardedApp], sites_guard
         });
     }
     None
+}
+
+/// The guarded site that covers `host`, the most specific one when several do. A host is
+/// covered when it equals the site or is a subdomain of it (`m.youtube.com` under
+/// `youtube.com`), never by a mere suffix (`notyoutube.com` is not under `youtube.com`).
+/// Same rule as the server's `site_target` and the extension.
+pub fn guarded_site<'a>(host: &str, guarded_sites: &'a [String]) -> Option<&'a str> {
+    let host = host.trim_end_matches('.').to_ascii_lowercase();
+    guarded_sites
+        .iter()
+        .map(|site| site.as_str())
+        .filter(|site| {
+            let site = site.trim_end_matches('.').to_ascii_lowercase();
+            !site.is_empty() && (host == site || host.ends_with(&format!(".{site}")))
+        })
+        .max_by_key(|site| site.len())
 }
 
 #[cfg(test)]
@@ -352,7 +400,8 @@ mod tests {
             last = Some(d.step(&Inputs {
                 front,
                 guarded_apps: &apps,
-                sites_guarded: false,
+                guarded_sites: &[],
+                extension: None,
                 balance: Some(balance),
                 now: NOW,
                 dt: 1.0,
@@ -489,7 +538,8 @@ mod tests {
         let s = d.step(&Inputs {
             front: Some(&steam()),
             guarded_apps: &apps,
-            sites_guarded: false,
+            guarded_sites: &[],
+            extension: None,
             balance: Some(&c),
             now: c.exp,
             dt: 1.0,
@@ -506,7 +556,8 @@ mod tests {
         let s = d.step(&Inputs {
             front: Some(&steam()),
             guarded_apps: &apps,
-            sites_guarded: false,
+            guarded_sites: &[],
+            extension: None,
             balance: None,
             now: NOW,
             dt: 1.0,
@@ -540,16 +591,56 @@ mod tests {
         assert_eq!(d.next_tick().unwrap().seconds, 30, "the server multiplies");
     }
 
+    fn sites() -> Vec<String> {
+        vec!["youtube.com".into(), "music.youtube.com".into()]
+    }
+
+    fn tab(site: Option<&str>, idle: bool) -> TabReport {
+        TabReport { site: site.map(str::to_owned), idle }
+    }
+
     #[test]
     fn whole_browser_drains_only_while_sites_are_guarded() {
         let apps = guarded();
-        assert_eq!(guarded_in_front(&chrome(), &apps, false), None);
-        let g = guarded_in_front(&chrome(), &apps, true).unwrap();
+        assert_eq!(guarded_in_front(&chrome(), &apps, &[], None), None);
+        let g = guarded_in_front(&chrome(), &apps, &sites(), None).unwrap();
         assert_eq!((g.kind, g.charge), (DrainKind::Browser, SpendTarget::WholeBrowser));
         let picked = vec![GuardedApp { app_id: chrome().id, target_id: "t-chrome".into(), label: "Chrome".into() }];
-        let g = guarded_in_front(&chrome(), &picked, true).unwrap();
+        let g = guarded_in_front(&chrome(), &picked, &sites(), None).unwrap();
         assert_eq!(g.charge, SpendTarget::Target("t-chrome".into()), "a picked browser is charged as that app");
-        assert_eq!(guarded_in_front(&finder(), &apps, true), None);
+        assert_eq!(guarded_in_front(&finder(), &apps, &sites(), None), None);
+    }
+
+    #[test]
+    fn a_browser_with_the_extension_drains_only_on_guarded_sites() {
+        let apps = guarded();
+        let on = |t: TabReport| guarded_in_front(&chrome(), &apps, &sites(), Some(&t));
+        let g = on(tab(Some("m.youtube.com"), false)).unwrap();
+        assert_eq!(
+            (g.kind, g.label.as_str(), g.charge),
+            (DrainKind::Site, "youtube.com", SpendTarget::Site("m.youtube.com".into()))
+        );
+        assert_eq!(on(tab(Some("example.com"), false)), None, "a site that is not guarded costs nothing");
+        assert_eq!(on(tab(None, false)), None, "new tab page, settings, blocked page");
+        assert_eq!(on(tab(Some("youtube.com"), true)), None, "idle: nothing drains");
+        assert_eq!(on(TabReport::default()), None, "linked, nothing reported yet");
+        assert_eq!(
+            guarded_in_front(&finder(), &apps, &sites(), Some(&tab(Some("youtube.com"), false))),
+            None,
+            "only a browser in front counts"
+        );
+    }
+
+    #[test]
+    fn site_match_is_by_whole_labels_and_most_specific() {
+        let s = sites();
+        assert_eq!(guarded_site("youtube.com", &s), Some("youtube.com"));
+        assert_eq!(guarded_site("m.youtube.com", &s), Some("youtube.com"));
+        assert_eq!(guarded_site("music.youtube.com", &s), Some("music.youtube.com"));
+        assert_eq!(guarded_site("Www.YouTube.com.", &s), Some("youtube.com"));
+        assert_eq!(guarded_site("notyoutube.com", &s), None);
+        assert_eq!(guarded_site("youtube.com.evil.net", &s), None);
+        assert_eq!(guarded_site("com", &s), None);
     }
 
     #[test]
@@ -560,7 +651,8 @@ mod tests {
         d.step(&Inputs {
             front: Some(&steam()),
             guarded_apps: &apps,
-            sites_guarded: false,
+            guarded_sites: &[],
+            extension: None,
             balance: Some(&c),
             now: NOW,
             dt: 1000.0,

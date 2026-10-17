@@ -271,7 +271,8 @@ async fn drain_loop_charges_locks_and_stops() {
     let start = sync.balance().unwrap();
     println!("start: {} s, multiplier {}", start.balance_seconds, start.multiplier);
 
-    let guard = Guard::new(sync.clone(), "in.weenja.warden.desktop.staging");
+    let (links, _events) = warden_desktop_lib::browser_ext::link::Links::new();
+    let guard = Guard::new(sync.clone(), links, "in.weenja.warden.desktop.staging");
     let toasts = Arc::new(AtomicUsize::new(0));
     let poll = |n: usize| {
         let (guard, toasts) = (guard.clone(), toasts.clone());
@@ -358,6 +359,123 @@ async fn drain_loop_charges_locks_and_stops() {
     assert!(u.view.shield.is_some(), "switching back shows the shield again");
     assert_eq!(server_balance(sync.clone()).await, 0);
     println!("switch away: shield hidden, drain stopped; switch back: shield up again");
+
+    delete_user(&api, &jwt).await;
+    std::fs::remove_dir_all(data_dir).ok();
+}
+
+/// The spend rows of the user, oldest first: (target_id the server charged, seconds). The
+/// ledger is readable by its owner (RLS), so this shows what the server did with each tick.
+async fn spend_rows(api: &Api, jwt: &str) -> Vec<(Option<String>, i64)> {
+    let rows: Vec<Value> = reqwest::Client::new()
+        .get(format!("{}/rest/v1/ledger?select=source,seconds&kind=eq.spend&order=id", api.base_url()))
+        .header("apikey", api.publishable_key())
+        .bearer_auth(jwt)
+        .send()
+        .await
+        .expect("ledger request")
+        .json()
+        .await
+        .expect("ledger body");
+    rows.iter()
+        .map(|r| (r["source"]["target_id"].as_str().map(str::to_owned), r["seconds"].as_i64().unwrap_or(0)))
+        .collect()
+}
+
+/// The browser extension link against staging, through the real drain loop with a fake Mac
+/// (Chrome in front) and a fake extension on the app's side of the link:
+/// 1. The extension reports m.youtube.com, youtube.com is guarded: ticks name the site and the
+///    server charges the youtube.com block target.
+/// 2. A site that is not guarded, or idle: nothing drains.
+/// 3. The extension disconnects: the whole browser drains again (tick with no target, no site).
+#[tokio::test]
+#[ignore = "talks to staging"]
+async fn extension_site_drain_and_whole_browser() {
+    use warden_desktop_lib::browser_ext::link::Links;
+    use warden_desktop_lib::drain::DrainKind;
+    const STEP: f64 = 10.0;
+    const CHROME: &str = "com.google.Chrome";
+
+    let api = api();
+    let tokens = anonymous_user(&api).await;
+    let jwt = tokens.access_token.clone();
+    let session = Arc::new(session_manager_with(&api, Box::<MemoryStore>::default()));
+    session.set(Session::from_token_response(tokens)).await.unwrap();
+    let data_dir = std::env::temp_dir().join(format!("warden-staging-{}", uuid::Uuid::new_v4()));
+    let fake = Arc::new(FakePlatform::default());
+    let sync = Arc::new(SyncService::new(api.clone(), session, fake.clone(), &data_dir));
+    sync.register_device().await.expect("register");
+    let site = GuardedItem { token: "youtube.com".into(), label: "YouTube".into() };
+    api.set_guarded(&jwt, "site", std::slice::from_ref(&site), None).await.expect("guard a site");
+    sync.refresh_block_list().await.unwrap();
+    let youtube_target = sync.guarded_sites()[0].id.clone();
+    let _: Value =
+        api.function(&jwt, "dev-tools", &json!({ "action": "add_points", "n": 5 })).await.expect("dev-tools");
+    sync.heartbeat(None).await.unwrap();
+    let start = sync.balance().unwrap().balance_seconds;
+    println!("start: {start} s");
+
+    let (links, _events) = Links::new();
+    let guard = Guard::new(sync.clone(), links.clone(), "in.weenja.warden.desktop.staging");
+    let poll = |n: usize| {
+        let guard = guard.clone();
+        async move {
+            let mut last = None;
+            for _ in 0..n {
+                last = Some(guard.poll(STEP));
+                guard.settle().await;
+            }
+            last.unwrap()
+        }
+    };
+    let server_balance = |sync: Arc<SyncService>| async move {
+        sync.heartbeat(None).await.unwrap();
+        sync.balance().unwrap().balance_seconds
+    };
+
+    // 1. Chrome in front, the extension says m.youtube.com.
+    let (chrome, mut to_extension) = links.open(Some(CHROME.into()));
+    links.receive(chrome, br#"{"type":"hello","ext_version":"0.1.0"}"#);
+    assert_eq!(to_extension.try_recv().unwrap()["type"], "hello", "the app answers hello");
+    assert_eq!(to_extension.try_recv().unwrap()["type"], "state", "and sends its state right after");
+    links.receive(chrome, br#"{"type":"tab","site":"m.youtube.com","idle":false}"#);
+    fake.set_front(CHROME, "Google Chrome");
+    let u = poll(3).await;
+    let drain = u.view.drain.expect("a guarded site drains");
+    assert_eq!((drain.kind, drain.label.as_str()), (DrainKind::Site, "youtube.com"));
+    fake.set_front("com.apple.finder", "Finder");
+    poll(1).await;
+    let after_site = server_balance(sync.clone()).await;
+    println!("m.youtube.com 30 s with the extension: {start} -> {after_site} s");
+    assert_eq!(after_site, start - 30);
+
+    // 2. Not guarded, then idle on a guarded site: nothing drains, nothing is charged.
+    fake.set_front(CHROME, "Google Chrome");
+    links.receive(chrome, br#"{"type":"tab","site":"example.com","idle":false}"#);
+    assert!(poll(3).await.view.drain.is_none(), "example.com is not guarded");
+    links.receive(chrome, br#"{"type":"tab","site":"www.youtube.com","idle":true}"#);
+    assert!(poll(3).await.view.drain.is_none(), "idle drains nothing");
+    assert_eq!(server_balance(sync.clone()).await, after_site);
+    // The server itself refuses a site that is not guarded (the app never sends one).
+    let refused = sync.spend_tick(&SpendTarget::Site("example.com".into()), 5, "x-not-guarded").await;
+    println!("spend-tick site example.com: {:?}", refused.as_ref().err());
+    assert!(refused.is_err());
+
+    // 3. The extension goes away: the whole browser drains again.
+    links.close(chrome);
+    let u = poll(3).await;
+    assert_eq!(u.view.drain.map(|d| d.kind), Some(DrainKind::Browser));
+    fake.set_front("com.apple.finder", "Finder");
+    poll(1).await;
+    let after_browser = server_balance(sync.clone()).await;
+    println!("Chrome 30 s without the extension: {after_site} -> {after_browser} s");
+    assert_eq!(after_browser, after_site - 30);
+
+    // What the server recorded: the site ticks charged the youtube.com target; the whole
+    // browser tick has no target.
+    let rows = spend_rows(&api, &jwt).await;
+    println!("ledger spend rows (target_id, seconds): {rows:?}");
+    assert_eq!(rows, vec![(Some(youtube_target), -30), (None, -30)]);
 
     delete_user(&api, &jwt).await;
     std::fs::remove_dir_all(data_dir).ok();

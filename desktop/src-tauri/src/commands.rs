@@ -11,7 +11,9 @@ use tauri_plugin_autostart::ManagerExt as _;
 
 use crate::api::{ApiError, GuardedItem, TokenResponse};
 use crate::auth::{self, looks_like_email};
-use crate::drain::DrainKind;
+use crate::browser_ext::link::{Draining, Facts};
+use crate::drain::{DrainKind, LOW_POINTS};
+use crate::guard::GuardView;
 use crate::new_account::{self, Screened};
 use crate::picker::{picker_apps, PickerApp};
 use crate::placement::{self, PillMetrics};
@@ -43,7 +45,7 @@ pub async fn get_state(state: State<'_, AppState>) -> Result<UiState, String> {
 }
 
 async fn ui_state(state: &AppState) -> UiState {
-    state.sync.ui_state(&state.guard.view()).await
+    state.sync.ui_state(&state.guard.view(), &state.links.linked_browsers()).await
 }
 
 /// Open Google sign-in in the user's default browser. It returns through the deep link.
@@ -125,9 +127,9 @@ pub fn pill_metrics(window: WebviewWindow) -> PillMetrics {
     placement::pill_metrics(&window)
 }
 
-/// Stop on the pill. An app is asked to quit (the polite quit: it may ask to save). A whole
-/// browser is left open (closing every tab would be too much): its pill hides, it keeps draining
-/// while it is in front.
+/// Stop on the pill. An app is asked to quit (the polite quit: it may ask to save). A guarded
+/// site's tab is closed by the browser extension. A whole browser is left open (closing every
+/// tab would be too much): its pill hides, it keeps draining while it is in front.
 #[tauri::command]
 pub async fn stop_draining(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     let Some(drain) = state.guard.view().drain else {
@@ -137,6 +139,7 @@ pub async fn stop_draining(app: AppHandle, state: State<'_, AppState>) -> Result
         DrainKind::App => {
             state.sync.platform().terminate_app(&drain.app_id);
         }
+        DrainKind::Site => state.links.close_tab(&drain.app_id, &drain.label),
         DrainKind::Browser => {
             state.guard.hide_pill(&drain.app_id);
             if let Some(pill) = app.get_webview_window(ui_windows::PILL) {
@@ -307,8 +310,33 @@ async fn finish_google_sign_in(app: &AppHandle, state: &AppState, tokens: TokenR
     }
 }
 
+/// The state changed: re-render every window and tell every linked browser extension.
 pub async fn emit_state(app: &AppHandle, state: &AppState) {
-    let _ = app.emit(STATE_EVENT, ui_state(state).await);
+    let guard = state.guard.view();
+    let ui = state.sync.ui_state(&guard, &state.links.linked_browsers()).await;
+    let sites = state.sync.guarded_sites().into_iter().map(|t| t.token).collect();
+    state.links.publish(extension_facts(&ui, &guard, sites));
+    let _ = app.emit(STATE_EVENT, ui);
+}
+
+/// The `state` message for the extensions: only what they need to show the badge, the popup
+/// and the blocked page. It never leaves this computer.
+fn extension_facts(ui: &UiState, guard: &GuardView, guarded_sites: Vec<String>) -> Facts {
+    let points = ui.balance_seconds.unwrap_or(0).max(0) / 60;
+    let draining = guard.drain.as_ref().filter(|d| d.kind == DrainKind::Site && !d.locked).map(|d| Draining {
+        browser: d.app_id.clone(),
+        site: d.label.clone(),
+        per_min: d.per_minute,
+    });
+    Facts {
+        signed_in: ui.signed_in,
+        points,
+        low: ui.signed_in && points <= LOW_POINTS,
+        locked: guard.locked,
+        guarded_sites,
+        draining,
+        device_name: ui.device.as_ref().map(|d| d.name.clone()),
+    }
 }
 
 fn friendly_auth_error(e: &ApiError) -> String {

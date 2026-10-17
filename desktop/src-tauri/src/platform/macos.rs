@@ -117,6 +117,33 @@ fn icon_png(path: &NSString) -> Option<Vec<u8>> {
     Some(data.to_vec())
 }
 
+/// The parent process id, from the kernel's process info (no permission needed for processes
+/// of this user).
+pub(super) fn process_parent(pid: u32) -> Option<u32> {
+    let mut info: libc::proc_bsdinfo = unsafe { std::mem::zeroed() };
+    let size = std::mem::size_of::<libc::proc_bsdinfo>() as i32;
+    let read = unsafe {
+        libc::proc_pidinfo(pid as i32, libc::PROC_PIDTBSDINFO, 0, (&raw mut info).cast::<std::ffi::c_void>(), size)
+    };
+    (read == size).then_some(info.pbi_ppid)
+}
+
+pub(super) fn process_exe(pid: u32) -> Option<PathBuf> {
+    let mut buffer = vec![0u8; libc::PROC_PIDPATHINFO_MAXSIZE as usize];
+    let len = unsafe { libc::proc_pidpath(pid as i32, buffer.as_mut_ptr().cast(), buffer.len() as u32) };
+    if len <= 0 {
+        return None;
+    }
+    buffer.truncate(len as usize);
+    Some(PathBuf::from(String::from_utf8(buffer).ok()?))
+}
+
+/// The bundle id of an app process (None for helpers and command-line tools).
+pub(super) fn process_app_id(pid: u32) -> Option<String> {
+    let app = NSRunningApplication::runningApplicationWithProcessIdentifier(pid as i32)?;
+    Some(app.bundleIdentifier()?.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

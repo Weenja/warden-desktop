@@ -2,6 +2,7 @@
 
 pub mod api;
 pub mod auth;
+pub mod browser_ext;
 mod commands;
 pub mod config;
 pub mod drain;
@@ -22,6 +23,7 @@ use tauri_plugin_deep_link::DeepLinkExt;
 
 use crate::api::Api;
 use crate::auth::PendingSignIn;
+use crate::browser_ext::link::{LinkEvent, Links};
 use crate::config::Config;
 use crate::guard::Guard;
 use crate::session::{KeychainStore, RefreshFn, SecretStore, SessionManager};
@@ -32,6 +34,8 @@ pub struct AppState {
     pub api: Api,
     pub sync: Arc<SyncService>,
     pub guard: Arc<Guard>,
+    /// Linked browser extensions (native messaging, see `browser_ext`).
+    pub links: Arc<Links>,
     pub pending: PendingSignIn,
 }
 
@@ -106,14 +110,18 @@ pub fn run() {
             let platform: Arc<dyn platform::Platform> = Arc::from(platform::current());
             let data_dir = app.path().app_data_dir()?;
             let sync = Arc::new(SyncService::new(api.clone(), session, platform, &data_dir));
-            let guard = Guard::new(sync.clone(), &identifier);
-            app.manage(AppState { api, sync, guard, pending: PendingSignIn::default() });
+            let (links, link_events) = Links::new();
+            let guard = Guard::new(sync.clone(), links.clone(), &identifier);
+            app.manage(AppState { api, sync, guard, links: links.clone(), pending: PendingSignIn::default() });
+            register_native_host(&data_dir);
+            tauri::async_runtime::spawn(browser_ext::server::serve(links));
 
             let handle = app.handle().clone();
             tray::create(&handle)?;
             ui_windows::create_popover(&handle)?;
             ui_windows::create_drain_windows(&handle)?;
             listen_for_deep_links(&handle)?;
+            tauri::async_runtime::spawn(handle_link_events(handle.clone(), link_events));
             tauri::async_runtime::spawn(start(handle));
             Ok(())
         })
@@ -146,6 +154,41 @@ fn listen_for_deep_links(app: &AppHandle) -> tauri::Result<()> {
         }
     });
     Ok(())
+}
+
+/// Tell the browsers where Warden's native messaging host is (this exe). Every start, so the
+/// manifests follow the app when it moves or updates.
+fn register_native_host(data_dir: &std::path::Path) {
+    let Ok(exe) = std::env::current_exe() else { return };
+    #[cfg(target_os = "macos")]
+    let written = {
+        let _ = data_dir;
+        browser_ext::manifest::register(&exe)
+    };
+    #[cfg(windows)]
+    let written = browser_ext::manifest::register(&exe, data_dir);
+    log::info!("native messaging host manifests: {written:?}");
+}
+
+/// React to the browser extensions: re-render when one links or leaves; "Open Warden" shows
+/// the popover, or the sign-in window when signed out.
+async fn handle_link_events(app: AppHandle, mut events: tokio::sync::mpsc::UnboundedReceiver<LinkEvent>) {
+    while let Some(event) = events.recv().await {
+        let state = app.state::<AppState>();
+        match event {
+            LinkEvent::Changed => commands::emit_state(&app, &state).await,
+            LinkEvent::ShowApp => {
+                let app = app.clone();
+                let signed_in = state.sync.session().is_signed_in().await;
+                let _ = app.clone().run_on_main_thread(move || {
+                    let shown = if signed_in { ui_windows::open_popover(&app) } else { ui_windows::open_signin(&app) };
+                    if let Err(e) = shown {
+                        log::warn!("show app: {e}");
+                    }
+                });
+            }
+        }
+    }
 }
 
 /// Load the saved session; sync if signed in, otherwise ask to sign in. Then keep syncing.

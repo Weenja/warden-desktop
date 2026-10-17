@@ -90,6 +90,15 @@ pub struct AppEntry {
     pub icon: Option<String>,
 }
 
+/// An installed browser for the popover, and whether the Warden extension is linked in it.
+#[derive(Debug, Clone, Serialize)]
+pub struct BrowserView {
+    pub id: String,
+    pub name: String,
+    pub icon: Option<String>,
+    pub extension: bool,
+}
+
 /// A guarded app of this computer, with its icon when the app is installed.
 #[derive(Debug, Clone, Serialize)]
 pub struct GuardedAppView {
@@ -125,7 +134,7 @@ pub struct UiState {
     pub guarded_apps: Vec<GuardedAppView>,
     pub guarded_sites: usize,
     pub crew: Vec<String>,
-    pub browsers: Vec<AppEntry>,
+    pub browsers: Vec<BrowserView>,
     pub online: bool,
     /// What drains now (the pill). None = the pill is hidden.
     pub drain: Option<DrainView>,
@@ -333,8 +342,9 @@ impl SyncService {
         *state = SyncState { online: true, apps, ..Default::default() };
     }
 
-    /// What the windows render: the synced state plus what the drain loop sees (`guard`).
-    pub async fn ui_state(&self, guard: &GuardView) -> UiState {
+    /// What the windows render: the synced state plus what the drain loop sees (`guard`) and
+    /// the browsers whose Warden extension is linked (`linked_browsers`).
+    pub async fn ui_state(&self, guard: &GuardView, linked_browsers: &[String]) -> UiState {
         let signed_in = self.session.is_signed_in().await;
         let email = self.session.email().await;
         let guarded_apps: Vec<GuardedAppView> = self
@@ -344,7 +354,17 @@ impl SyncService {
             .collect();
         let guarded_sites = self.guarded_sites().len();
         let state = self.state.lock().unwrap();
-        let browsers = state.apps.iter().filter(|a| KNOWN_BROWSERS.contains(&a.id.as_str())).cloned().collect();
+        let browsers = state
+            .apps
+            .iter()
+            .filter(|a| KNOWN_BROWSERS.contains(&a.id.as_str()))
+            .map(|a| BrowserView {
+                id: a.id.clone(),
+                name: a.name.clone(),
+                icon: a.icon.clone(),
+                extension: linked_browsers.contains(&a.id),
+            })
+            .collect();
         UiState {
             signed_in,
             email,

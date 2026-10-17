@@ -284,3 +284,31 @@ fn computer_name() -> Option<String> {
     let name = String::from_utf16_lossy(&buffer[..len as usize]);
     (!name.is_empty()).then_some(name)
 }
+
+/// (parent pid, exe file name) of a running process, from a process snapshot. Works for
+/// elevated processes too, which a normal user cannot open.
+fn process_entry(pid: u32) -> Option<(u32, String)> {
+    let snapshot = Handle(unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }.ok()?);
+    let mut entry = PROCESSENTRY32W { dwSize: size_of::<PROCESSENTRY32W>() as u32, ..Default::default() };
+    let mut more = unsafe { Process32FirstW(snapshot.0, &mut entry) }.is_ok();
+    while more {
+        if entry.th32ProcessID == pid {
+            let len = entry.szExeFile.iter().position(|c| *c == 0).unwrap_or(entry.szExeFile.len());
+            return Some((entry.th32ParentProcessID, String::from_utf16_lossy(&entry.szExeFile[..len])));
+        }
+        more = unsafe { Process32NextW(snapshot.0, &mut entry) }.is_ok();
+    }
+    None
+}
+
+pub(super) fn process_parent(pid: u32) -> Option<u32> {
+    process_entry(pid).map(|(parent, _)| parent)
+}
+
+pub(super) fn process_app_id(pid: u32) -> Option<String> {
+    process_entry(pid).and_then(|(_, exe)| exe_id(&exe))
+}
+
+pub(super) fn process_exe(pid: u32) -> Option<std::path::PathBuf> {
+    process_path(pid).map(std::path::PathBuf::from)
+}

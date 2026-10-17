@@ -21,7 +21,7 @@ tauri-plugin-opener = "2"
 tauri-plugin-autostart = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
+tokio = { version = "1", features = ["rt", "sync", "time", "macros", "net", "io-util", "io-std"] }
 keyring = "4"
 base64 = "0.22"
 sha2 = "0.10"
@@ -49,6 +49,7 @@ windows = { version = "0.62", features = [
     "Win32_System_Com",
     "Win32_System_Diagnostics_ToolHelp",
     "Win32_System_Environment",
+    "Win32_System_Pipes",
     "Win32_System_RemoteDesktop",
     "Win32_System_SystemInformation",
     "Win32_System_Threading",
@@ -67,6 +68,8 @@ objc2-app-kit = "0.3"
 objc2-core-foundation = "0.3"
 objc2-core-graphics = "0.3"
 tauri-nspanel = "2.1"
+# proc_pidinfo / proc_pidpath: the browser link checks which process connected (see platform).
+libc = "0.2"
 objc2-system-configuration = { version = "0.3", default-features = false, features = ["std", "SCDynamicStore", "SCDynamicStoreCopySpecific"] }
 
 [dev-dependencies]
