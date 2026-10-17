@@ -1,7 +1,8 @@
 //! Native messaging host manifests: small JSON files that tell each browser which program to
 //! start when the Warden extension calls `runtime.connectNative("in.weenja.warden.staging")`,
 //! and which extension may do so. Written at every app start (idempotent, per user, no admin),
-//! so they always point at the exe that runs now, even after the app moved or updated.
+//! so they always point at the helper next to the app that runs now (`warden-native-host`, the
+//! same on macOS and Windows), even after the app moved or updated.
 //!
 //! Locations (per user), from the Chrome and MDN native messaging docs:
 //! - macOS: `~/Library/Application Support/<browser folder>/NativeMessagingHosts/<name>.json`,
@@ -138,10 +139,10 @@ mod tests {
 
     #[test]
     fn manifests_allow_only_the_warden_extension() {
-        let exe = Path::new("/Applications/Warden β.app/Contents/MacOS/warden");
+        let exe = Path::new("/Applications/Warden β.app/Contents/MacOS/warden-native-host");
         let chrome = chrome_manifest(exe);
         assert_eq!(chrome["allowed_origins"], json!(["chrome-extension://blcmgpbfbbemkkcfjgbhgblnapbndfgp/"]));
-        assert_eq!(chrome["path"], "/Applications/Warden β.app/Contents/MacOS/warden");
+        assert_eq!(chrome["path"], "/Applications/Warden β.app/Contents/MacOS/warden-native-host");
         assert_eq!(chrome["type"], "stdio");
         assert!(chrome.get("allowed_extensions").is_none());
         let firefox = firefox_manifest(exe);

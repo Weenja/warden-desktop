@@ -1,9 +1,9 @@
 //! The app listens on the local endpoint for native hosts (see `endpoint.rs`) and turns each
 //! connection into a [`Link`](super::link::Links). Anti-tamper: a connection is accepted only
-//! from this same Warden exe (the host the browser started), and the browser it serves is read
-//! from the host's parent processes here, not taken from anything the host says. A script that
-//! connects by itself is refused; Warden started by hand from a terminal links with no browser,
-//! which never changes what drains.
+//! from Warden's own helper exe (the host the browser started), and the browser it serves is
+//! read from the host's parent processes here, not taken from anything the host says. A script
+//! that connects by itself is refused; the helper started by hand from a terminal links with no
+//! browser, which never changes what drains.
 
 use std::io;
 use std::sync::Arc;
@@ -81,7 +81,12 @@ fn accept<S>(links: &Arc<Links>, stream: S, pid: u32)
 where
     S: AsyncRead + AsyncWrite + Send + 'static,
 {
-    if !platform::is_this_exe(pid) {
+    // Who may report sites: only the process running the exact helper file shipped next to this
+    // app (`warden-native-host` in the same folder, paths resolved). Anything else, a script or
+    // another program on the socket, could claim "no guarded site open" and stop the drain.
+    // The app's own exe is not accepted either: it never acts as the host.
+    let host = platform::sibling_exe(super::HOST_EXE);
+    if !host.is_some_and(|host| platform::runs_exe(pid, &host)) {
         log::warn!("browser link: refused a connection that is not Warden's native host");
         return;
     }

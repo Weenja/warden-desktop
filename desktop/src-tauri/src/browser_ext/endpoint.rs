@@ -3,7 +3,8 @@
 //! - macOS: a Unix socket in the app's data folder (`~/Library/Application Support/<app id>`),
 //!   readable and writable by this user only (mode 0600).
 //! - Windows: a named pipe whose name holds the user's name. Remote clients are refused, and
-//!   each side checks that the other end is this same Warden exe (see `server.rs`, `host.rs`).
+//!   each side checks the exe on the other end: the app accepts only its helper (`server.rs`),
+//!   the helper talks only to the app (`connect` below).
 
 use std::io;
 
@@ -50,12 +51,13 @@ pub async fn connect() -> io::Result<Stream> {
     use windows::Win32::System::Pipes::GetNamedPipeServerProcessId;
 
     let client = tokio::net::windows::named_pipe::ClientOptions::new().open(pipe_name())?;
-    // Only talk to Warden itself: another program could have created a pipe with this name
-    // first to read which sites are open.
+    // Only talk to Warden itself, `warden.exe` next to this helper: another program could have
+    // created a pipe with this name first to read which sites are open.
     let mut server_pid = 0u32;
     unsafe { GetNamedPipeServerProcessId(HANDLE(client.as_raw_handle()), &mut server_pid) }
         .map_err(|e| io::Error::other(e.to_string()))?;
-    if !crate::platform::is_this_exe(server_pid) {
+    let app = crate::platform::sibling_exe(super::APP_EXE);
+    if !app.is_some_and(|app| crate::platform::runs_exe(server_pid, &app)) {
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, "the pipe is not Warden's"));
     }
     Ok(client)

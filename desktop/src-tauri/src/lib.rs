@@ -156,10 +156,13 @@ fn listen_for_deep_links(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Tell the browsers where Warden's native messaging host is (this exe). Every start, so the
-/// manifests follow the app when it moves or updates.
+/// Tell the browsers where Warden's native messaging host is: the `warden-native-host` helper
+/// next to this exe. Every start, so the manifests follow the app when it moves or updates.
 fn register_native_host(data_dir: &std::path::Path) {
-    let Ok(exe) = std::env::current_exe() else { return };
+    let Some(exe) = platform::sibling_exe(browser_ext::HOST_EXE).filter(|exe| exe.is_file()) else {
+        log::warn!("native messaging host: warden-native-host is missing next to the app");
+        return;
+    };
     #[cfg(target_os = "macos")]
     let written = {
         let _ = data_dir;

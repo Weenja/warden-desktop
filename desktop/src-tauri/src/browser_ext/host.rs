@@ -1,6 +1,6 @@
-//! Native messaging host mode: the browser starts this same binary when the Warden extension
-//! connects (`runtime.connectNative`). In this mode there is no window and no network: the
-//! process only relays framed messages between the browser (stdin/stdout) and the running
+//! The native messaging host, run by the `warden-native-host` helper that the browser starts
+//! when the Warden extension connects (`runtime.connectNative`). No window and no network: it
+//! only relays framed messages between the browser (stdin/stdout) and the running
 //! Warden app (the local endpoint). If the app is not running, the host starts it and keeps
 //! trying to connect. The host exits when the browser closes stdin.
 //!
@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 
-use super::{endpoint, frame, FIREFOX_EXTENSION_ID};
+use super::{endpoint, frame};
 
 /// Right after starting the app, try to connect this often (the app needs a moment to start)...
 const FAST_RETRY: Duration = Duration::from_secs(1);
@@ -20,14 +20,6 @@ const FAST_RETRY_FOR: Duration = Duration::from_secs(15);
 const SLOW_RETRY: Duration = Duration::from_secs(5);
 /// Start the app again if it is still not reachable after this long (it may have been quit).
 const RESTART_APP_AFTER: Duration = Duration::from_secs(60);
-
-/// True when the browser started this process as the native messaging host.
-/// Chrome (and Chromium browsers) pass the extension's origin, `chrome-extension://<id>/`
-/// (on Windows also `--parent-window=<n>`); Firefox passes the host manifest's path and the
-/// add-on id. A normal app start or a `warden://` link has neither.
-pub fn is_host_launch(args: &[String]) -> bool {
-    args.iter().skip(1).any(|arg| arg.starts_with("chrome-extension://") || arg == FIREFOX_EXTENSION_ID)
-}
 
 /// Run the host until the browser closes it. Returns the process exit code.
 pub fn run() -> i32 {
@@ -179,7 +171,7 @@ fn start_app() {
     }
 }
 
-/// Windows: this same exe with no arguments is the app. It must not inherit the browser's
+/// Windows: the app is `warden.exe` next to this helper. It must not inherit the browser's
 /// pipes (stdio null), and it should outlive the host: the browser may end the host's job
 /// when the extension disconnects, so ask to break away from it (refused if the job forbids
 /// it; then start it inside the job).
@@ -190,7 +182,7 @@ fn start_app() {
 
     const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
     const DETACHED_PROCESS: u32 = 0x0000_0008;
-    let Ok(exe) = std::env::current_exe() else { return };
+    let Some(exe) = crate::platform::sibling_exe(super::APP_EXE) else { return };
     let spawn = |flags: u32| {
         Command::new(&exe)
             .stdin(Stdio::null())
@@ -207,33 +199,6 @@ fn start_app() {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn args(list: &[&str]) -> Vec<String> {
-        list.iter().map(|s| s.to_string()).collect()
-    }
-
-    #[test]
-    fn browser_host_launches_are_recognised() {
-        assert!(is_host_launch(&args(&[
-            "/Applications/Warden β.app/Contents/MacOS/warden",
-            "chrome-extension://abc/"
-        ])));
-        assert!(is_host_launch(&args(&["warden.exe", "chrome-extension://abc/", "--parent-window=0"])));
-        assert!(is_host_launch(&args(&[
-            "warden",
-            "/Users/sam/Library/Application Support/Mozilla/NativeMessagingHosts/in.weenja.warden.staging.json",
-            FIREFOX_EXTENSION_ID,
-        ])));
-    }
-
-    #[test]
-    fn normal_starts_are_not_host_launches() {
-        assert!(!is_host_launch(&args(&["warden"])));
-        assert!(!is_host_launch(&args(&["warden.exe", "warden://auth-callback?code=chrome-extension://x"])));
-        // The program path itself is never read as an argument.
-        assert!(!is_host_launch(&args(&["chrome-extension://abc/"])));
-        assert!(!is_host_launch(&args(&["warden", "--autostart"])));
-    }
 
     #[test]
     fn replay_keeps_the_last_hello_and_tab_in_order() {

@@ -57,16 +57,20 @@ use macos::{process_app_id, process_exe, process_parent};
 #[cfg(target_os = "windows")]
 use windows::{process_app_id, process_exe, process_parent};
 
-/// True when process `pid` runs this same exe file. The browser link only accepts its own
-/// native host (this binary started by the browser), so another program cannot pose as the
-/// extension and report "no site open".
-pub fn is_this_exe(pid: u32) -> bool {
-    let same = |a: std::path::PathBuf, b: std::path::PathBuf| match (a.canonicalize(), b.canonicalize()) {
-        (Ok(a), Ok(b)) => a == b,
-        _ => false,
-    };
-    match (process_exe(pid), std::env::current_exe()) {
-        (Some(peer), Ok(me)) => same(peer, me),
+/// The exe file `name` (without `.exe`) in the folder of this process's own exe. Warden ships
+/// two programs side by side: the app (`warden`) and its native messaging helper
+/// (`warden-native-host`); Tauri bundles both into `Contents/MacOS/` of the .app and into the
+/// install folder on Windows.
+pub fn sibling_exe(name: &str) -> Option<std::path::PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    Some(exe.parent()?.join(format!("{name}{}", std::env::consts::EXE_SUFFIX)))
+}
+
+/// True when process `pid` runs exactly the exe file at `path`. Both paths are resolved first,
+/// so a link or a `..` in a path cannot make a different file look like Warden's.
+pub fn runs_exe(pid: u32, path: &std::path::Path) -> bool {
+    match (process_exe(pid).map(|p| p.canonicalize()), path.canonicalize()) {
+        (Some(Ok(peer)), Ok(expected)) => peer == expected,
         _ => false,
     }
 }
@@ -151,5 +155,18 @@ mod tests {
         for browser in WINDOWS_BROWSERS {
             assert_eq!(exe_names::exe_id(browser).as_deref(), Some(*browser));
         }
+    }
+
+    #[test]
+    fn runs_exe_matches_only_the_exact_file() {
+        let me = std::process::id();
+        let exe = std::env::current_exe().unwrap();
+        assert!(runs_exe(me, &exe));
+        // The same folder, another name (what the app expects from the helper): refused.
+        assert!(!runs_exe(me, &sibling_exe("warden-native-host").unwrap()));
+        // A path with `..` that leads back to the same file still matches.
+        let dir = exe.parent().unwrap();
+        let roundabout = dir.join("..").join(dir.file_name().unwrap()).join(exe.file_name().unwrap());
+        assert!(runs_exe(me, &roundabout));
     }
 }

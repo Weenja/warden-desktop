@@ -6,9 +6,22 @@ license = "AGPL-3.0-only"
 edition = "2021"
 rust-version = "1.90"
 
+default-run = "warden"
+
 [lib]
 name = "warden_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+# The app. Named like `mainBinaryName` in tauri.conf.json, so the helper finds it by name.
+[[bin]]
+name = "warden"
+path = "src/main.rs"
+
+# The browsers' native messaging host (console program). Tauri bundles every binary of this
+# crate next to the app: `Contents/MacOS/` in the .app, the install folder on Windows.
+[[bin]]
+name = "warden-native-host"
+path = "src/bin/warden-native-host.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
