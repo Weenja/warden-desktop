@@ -4,6 +4,7 @@ pub mod api;
 pub mod auth;
 mod commands;
 pub mod config;
+pub mod placement;
 pub mod platform;
 pub mod session;
 pub mod sync;

@@ -8,14 +8,15 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use tauri::{AppHandle, Manager, PhysicalPosition, Rect, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Manager, Rect, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 
 pub const SIGNIN: &str = "signin";
 pub const POPOVER: &str = "popover";
 
 const SIGNIN_WIDTH: f64 = 380.0;
 const POPOVER_WIDTH: f64 = 330.0;
-/// Gap between the menu bar / taskbar and the popover, in logical pixels.
+/// Gap between the menu bar and the popover, in logical pixels.
+#[cfg(target_os = "macos")]
 const POPOVER_GAP: f64 = 6.0;
 
 /// When the popover last hid because it lost focus. A click on the tray icon first steals
@@ -81,14 +82,15 @@ pub fn toggle_popover(app: &AppHandle, icon: Rect) -> tauri::Result<()> {
     if win.is_visible()? || just_hidden {
         return win.hide();
     }
-    place_popover(&win, icon)?;
+    crate::placement::popover(&win, icon)?;
     win.show()?;
     win.set_focus()
 }
 
-/// Centre the popover on the icon. Below it when the icon is at the top of the screen (macOS
-/// menu bar), above it when at the bottom (Windows taskbar). Kept inside the screen.
-fn place_popover(win: &WebviewWindow, icon: Rect) -> tauri::Result<()> {
+/// Centre the popover under the menu bar icon, kept inside the screen. (Windows uses the tray
+/// flyout placement in `placement/windows.rs`.)
+#[cfg(target_os = "macos")]
+pub(crate) fn place_popover(win: &WebviewWindow, icon: Rect) -> tauri::Result<()> {
     let scale = win.scale_factor()?;
     let pos = icon.position.to_physical::<f64>(scale);
     let size = icon.size.to_physical::<f64>(scale);
@@ -105,5 +107,5 @@ fn place_popover(win: &WebviewWindow, icon: Rect) -> tauri::Result<()> {
     let icon_at_top = pos.y - my < mh / 2.0;
     let y = if icon_at_top { pos.y + size.height + gap } else { pos.y - h - gap };
     let x = (pos.x + size.width / 2.0 - w / 2.0).clamp(mx + gap, (mx + mw - w - gap).max(mx + gap));
-    win.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32))
+    win.set_position(tauri::PhysicalPosition::new(x.round() as i32, y.round() as i32))
 }
