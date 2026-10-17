@@ -42,13 +42,21 @@ impl Pkce {
 }
 
 /// `GET /auth/v1/authorize` for a provider, opened in the user's browser.
-pub fn authorize_url(supabase_url: &str, provider: &str, challenge: &str) -> Url {
+///
+/// `select_account`: add `prompt=select_account`. Supabase passes extra query parameters on to
+/// the provider (what supabase-js `signInWithOAuth({ options: { queryParams } })` does), so
+/// Google shows its account chooser instead of reusing the account the browser is signed in to.
+/// Used by "Use another account" after a sign-in with an account that has no Warden.
+pub fn authorize_url(supabase_url: &str, provider: &str, challenge: &str, select_account: bool) -> Url {
     let mut url = Url::parse(&format!("{supabase_url}/auth/v1/authorize")).expect("valid Supabase URL");
     url.query_pairs_mut()
         .append_pair("provider", provider)
         .append_pair("redirect_to", REDIRECT_URI)
         .append_pair("code_challenge", challenge)
         .append_pair("code_challenge_method", "s256");
+    if select_account {
+        url.query_pairs_mut().append_pair("prompt", "select_account");
+    }
     url
 }
 
@@ -125,11 +133,14 @@ mod tests {
 
     #[test]
     fn authorize_url_carries_redirect_and_challenge() {
-        let url = authorize_url("https://x.supabase.co", "google", "abc");
+        let url = authorize_url("https://x.supabase.co", "google", "abc", false);
         let q: Vec<_> = url.query_pairs().into_owned().collect();
         assert!(q.contains(&("redirect_to".into(), "warden://auth-callback".into())));
         assert!(q.contains(&("code_challenge_method".into(), "s256".into())));
+        assert!(!q.iter().any(|(k, _)| k == "prompt"));
         assert_eq!(url.path(), "/auth/v1/authorize");
+        let chooser = authorize_url("https://x.supabase.co", "google", "abc", true);
+        assert!(chooser.query_pairs().any(|(k, v)| k == "prompt" && v == "select_account"));
     }
 
     #[test]

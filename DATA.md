@@ -11,6 +11,9 @@ session token (`Authorization: Bearer ...`). Tokens are kept in the OS keychain 
 |---|---|---|
 | Google sign-in (browser) | `GET /auth/v1/authorize` | `provider=google`, `redirect_to=warden://auth-callback`, `code_challenge` (SHA-256 of a random secret), `code_challenge_method=s256` |
 | Google sign-in returns | `POST /auth/v1/token?grant_type=pkce` | `auth_code` (from the redirect), `code_verifier` (the random secret) |
+| Google sign-in, only if the account is under 10 minutes old (`user.created_at` from the sign-in) | `GET /rest/v1/devices?select=id,platform&limit=1` | nothing (reads whether the account has any device; you only see your own) |
+| Google sign-in, only if that account is under 10 minutes old AND has no device: the empty account Google sign-in just made (accounts are made on the phone) | `POST /functions/v1/delete-account` | nothing (deletes the signed-in account itself; never called for an account that has a device or is older than 10 minutes) |
+| "Use another account" (after "No Warden account") | `GET /auth/v1/authorize` | same as Google sign-in, plus `prompt=select_account` (passed on to Google so it shows its account chooser) |
 | Email sign-in | `POST /auth/v1/otp` | `email`, `create_user: false` |
 | Email code | `POST /auth/v1/verify` | `type: "email"`, `email`, `token` (the 6-digit code) |
 | Token refresh (before expiry) | `POST /auth/v1/token?grant_type=refresh_token` | `refresh_token` |
@@ -21,6 +24,8 @@ session token (`Authorization: Bearer ...`). Tokens are kept in the OS keychain 
 | Every 60 s | `GET /rest/v1/block_targets` | nothing (reads your guarded apps and sites) |
 | Picking guarded apps | `POST /rest/v1/rpc/set_guarded` | `p_kind: "app"`, `p_items` (app id + name, e.g. `com.valvesoftware.steam` / "Steam"), `p_device` |
 | Popover crew line | `POST /rest/v1/rpc/crew_state` | nothing (reads your crew's first names) |
+
+"Get Warden for your phone" opens https://getwarden.app in your browser; the app itself sends nothing there.
 
 Not sent: window titles, screen contents, URLs, window positions (read locally to put the pill and shield on the right screen), which non-guarded apps you use, your installed
 apps list (the picker reads it locally; only the apps you pick are sent).

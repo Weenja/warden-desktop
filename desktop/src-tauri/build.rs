@@ -4,6 +4,7 @@ fn main() {
     let commands = &[
         "get_state",
         "sign_in_google",
+        "open_get_warden",
         "send_email_code",
         "verify_email_code",
         "fit_window",

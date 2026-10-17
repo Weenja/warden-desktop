@@ -5,7 +5,11 @@ import { $, followSystemTheme, fitWindowToContent } from "./page";
 followSystemTheme();
 fitWindowToContent($("#content"));
 
-const views = { start: $("#view-start"), email: $<HTMLFormElement>("#view-email"), code: $<HTMLFormElement>("#view-code") };
+const views = {
+  start: $("#view-start"),
+  noAccount: $("#view-no-account"),
+  email: $<HTMLFormElement>("#view-email"), code: $<HTMLFormElement>("#view-code"),
+};
 const emailInput = $<HTMLInputElement>("#email");
 const codeInput = $<HTMLInputElement>("#code");
 const boxes = [...$("#code-boxes").children] as HTMLElement[];
@@ -38,20 +42,34 @@ function goLinked(): void {
 }
 
 // Google: the browser opens; the result comes back as an "auth-result" event.
-const googleButton = $<HTMLButtonElement>("#google");
-googleButton.addEventListener("click", () =>
-  busy(googleButton, async () => {
-    setError("#start-error", null);
-    try {
-      await core.signInGoogle();
-    } catch (e) {
-      setError("#start-error", errorText(e));
-    }
-  }),
-);
+function googleButton(id: string, errorId: string, selectAccount: boolean): void {
+  const button = $<HTMLButtonElement>(id);
+  button.addEventListener("click", () =>
+    busy(button, async () => {
+      setError(errorId, null);
+      try {
+        await core.signInGoogle(selectAccount);
+      } catch (e) {
+        setError(errorId, errorText(e));
+      }
+    }),
+  );
+}
+googleButton("#google", "#start-error", false);
+// "Use another account": Google shows its account chooser instead of the signed-in account.
+googleButton("#google-other", "#no-account-error", true);
+
+$("#get-warden").addEventListener("click", () => {
+  core.openGetWarden().catch((e: unknown) => setError("#no-account-error", errorText(e)));
+});
+
 void core.onAuthResult((result) => {
   if (result.ok) goLinked();
-  else {
+  else if (result.no_account !== null) {
+    $("#no-account-email").textContent = result.no_account || "this Google account";
+    setError("#no-account-error", null);
+    show("noAccount");
+  } else {
     show("start");
     setError("#start-error", result.message);
   }

@@ -6,6 +6,7 @@ mod commands;
 pub mod config;
 pub mod drain;
 pub mod guard;
+pub mod new_account;
 mod picker;
 mod placement;
 pub mod platform;
@@ -74,6 +75,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
             commands::sign_in_google,
+            commands::open_get_warden,
             commands::send_email_code,
             commands::verify_email_code,
             commands::fit_window,

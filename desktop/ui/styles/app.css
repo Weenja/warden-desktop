@@ -14,6 +14,8 @@ button:disabled:active { transform: none; }
 .form-error { margin: 12px 0 0; font: 700 13.5px/1.35 var(--f); color: var(--coral); }
 .panel .field { margin-bottom: 12px; }
 .panel__back { margin-top: 14px; }
+/* "No Warden account for <email>": a long address wraps instead of widening the window. */
+.no-account__title { overflow-wrap: anywhere; }
 
 /* The code boxes are a picture of one real input that sits invisibly on top, so paste,
    autofill ("one-time-code") and backspace all work like a normal text field. */

@@ -259,7 +259,7 @@ mod tests {
                     refresh_token: format!("{old}+1"),
                     expires_at: Some(now_secs() + 3600),
                     expires_in: 3600,
-                    user: AuthUser { id: "u1".into(), email: None },
+                    user: AuthUser { id: "u1".into(), email: None, created_at: None },
                 })
             })
         })

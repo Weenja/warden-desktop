@@ -12,9 +12,10 @@ use tauri_plugin_autostart::ManagerExt as _;
 use crate::api::{ApiError, GuardedItem, TokenResponse};
 use crate::auth::{self, looks_like_email};
 use crate::drain::DrainKind;
+use crate::new_account::{self, Screened};
 use crate::picker::{picker_apps, PickerApp};
 use crate::placement::{self, PillMetrics};
-use crate::session::{Session, SessionError};
+use crate::session::{now_secs, Session, SessionError};
 use crate::sync::{iso_now, SyncError, UiState};
 use crate::{ui_windows, AppState};
 
@@ -23,10 +24,16 @@ pub const STATE_EVENT: &str = "state-changed";
 /// Event telling the sign-in window how a browser sign-in ended.
 pub const AUTH_EVENT: &str = "auth-result";
 
+/// Where "Get Warden for your phone" goes. Fixed here, so the UI cannot open other URLs.
+const GET_WARDEN_URL: &str = "https://getwarden.app";
+
 #[derive(Clone, serde::Serialize)]
 pub struct AuthResult {
     pub ok: bool,
     pub message: Option<String>,
+    /// Set when the Google account has no Warden account: the sign-in window shows
+    /// "No Warden account for <email>". `Some("")` when Google gave no email.
+    pub no_account: Option<String>,
 }
 
 #[tauri::command]
@@ -39,11 +46,18 @@ async fn ui_state(state: &AppState) -> UiState {
 }
 
 /// Open Google sign-in in the user's default browser. It returns through the deep link.
+/// `select_account`: make Google show its account chooser ("Use another account").
 #[tauri::command]
-pub fn sign_in_google(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+pub fn sign_in_google(app: AppHandle, state: State<'_, AppState>, select_account: Option<bool>) -> Result<(), String> {
     let pkce = state.pending.start();
-    let url = auth::authorize_url(state.api.base_url(), "google", &pkce.challenge);
+    let url = auth::authorize_url(state.api.base_url(), "google", &pkce.challenge, select_account.unwrap_or(false));
     app.opener().open_url(url.as_str(), None::<&str>).map_err(|_| "Could not open your browser.".to_string())
+}
+
+/// "Get Warden for your phone": the website, in the user's browser.
+#[tauri::command]
+pub fn open_get_warden(app: AppHandle) -> Result<(), String> {
+    app.opener().open_url(GET_WARDEN_URL, None::<&str>).map_err(|_| "Could not open your browser.".to_string())
 }
 
 #[tauri::command]
@@ -227,30 +241,63 @@ pub async fn finish_sign_in(app: &AppHandle, state: &AppState, tokens: TokenResp
     Ok(())
 }
 
+/// How a Google sign-in from the deep link ended.
+enum GoogleOutcome {
+    SignedIn,
+    /// The Google account had no Warden account; the empty one the sign-in made is deleted.
+    NoAccount(Option<String>),
+    Failed(String),
+}
+
 /// Finish a Google sign-in from the `warden://auth-callback` deep link.
 pub async fn handle_auth_callback(app: &AppHandle, state: &AppState, url: &str) {
     log::info!("deep link received");
-    let result = match auth::parse_callback(url) {
+    let outcome = match auth::parse_callback(url) {
         Err(auth::CallbackError::NotOurs) => return,
-        Err(e) => Err(e.to_string()),
+        Err(e) => GoogleOutcome::Failed(e.to_string()),
         Ok(code) => match state.pending.take() {
             // No sign-in started here (or it expired): ignore links we did not ask for.
-            None => Err("This sign-in link has expired. Try again.".to_string()),
+            None => GoogleOutcome::Failed("This sign-in link has expired. Try again.".to_string()),
             Some(verifier) => match state.api.exchange_pkce(&code, &verifier).await {
-                Ok(tokens) => finish_sign_in(app, state, tokens).await,
-                Err(e) => Err(friendly_auth_error(&e)),
+                Ok(tokens) => finish_google_sign_in(app, state, tokens).await,
+                Err(e) => GoogleOutcome::Failed(friendly_auth_error(&e)),
             },
         },
     };
-    let payload = match result {
-        Ok(()) => AuthResult { ok: true, message: None },
-        Err(message) => AuthResult { ok: false, message: Some(message) },
+    let payload = match outcome {
+        GoogleOutcome::SignedIn => AuthResult { ok: true, message: None, no_account: None },
+        GoogleOutcome::NoAccount(email) => {
+            log::info!("google sign-in: no Warden account; the empty one was deleted");
+            AuthResult { ok: false, message: None, no_account: Some(email.unwrap_or_default()) }
+        }
+        GoogleOutcome::Failed(message) => AuthResult { ok: false, message: Some(message), no_account: None },
     };
     if let Some(message) = &payload.message {
         log::warn!("sign-in link: {message}");
     }
     let _ = ui_windows::open_signin(app);
     let _ = app.emit_to(ui_windows::SIGNIN, AUTH_EVENT, payload);
+}
+
+/// Google can create an account during sign-in (email cannot: `create_user: false`). Check for
+/// that BEFORE anything is saved or registered; see `new_account.rs` for the safety rule.
+async fn finish_google_sign_in(app: &AppHandle, state: &AppState, tokens: TokenResponse) -> GoogleOutcome {
+    match new_account::screen_google_sign_in(&state.api, &tokens, now_secs()).await {
+        Ok(Screened::Kept) => match finish_sign_in(app, state, tokens).await {
+            Ok(()) => GoogleOutcome::SignedIn,
+            Err(message) => GoogleOutcome::Failed(message),
+        },
+        Ok(Screened::Deleted) => {
+            // The session was never saved; clearing makes sure no token of the deleted account
+            // is left in the keychain or in memory.
+            if let Err(e) = state.sync.session().sign_out().await {
+                log::warn!("could not clear the session: {e}");
+            }
+            GoogleOutcome::NoAccount(tokens.user.email)
+        }
+        // Nothing was saved and nothing deleted. A retry within 10 minutes checks again.
+        Err(e) => GoogleOutcome::Failed(friendly_auth_error(&e)),
+    }
 }
 
 pub async fn emit_state(app: &AppHandle, state: &AppState) {

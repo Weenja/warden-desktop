@@ -33,6 +33,17 @@
     <p class="panel__foot inline-ico"><svg class="ico"><use href="#i-phone"/></svg>No account? Get Warden on your phone first.</p>
   </section>
 
+  <!-- Google account with no Warden account. Accounts are made on the phone; the empty account
+       Google sign-in just made is already deleted (see new_account.rs). -->
+  <section id="view-no-account" hidden>
+    <img class="moa panel__moa" src="/mochi/worried.webp" alt="MOA">
+    <h1 class="panel__title no-account__title">No Warden account for <span id="no-account-email"></span></h1>
+    <p class="panel__lead">Set up Warden on your phone first. Then sign in here with the same Google account.</p>
+    <button class="btn btn--block btn--google" id="google-other"><span class="glyph-g">G</span><span>Use another account</span></button>
+    <button class="btn btn--block btn--outline" id="get-warden"><svg class="ico"><use href="#i-phone"/></svg><span>Get Warden for your phone</span></button>
+    <p class="form-error" id="no-account-error" role="alert" hidden></p>
+  </section>
+
   <!-- Step 2: which email -->
   <form id="view-email" hidden>
     <img class="moa panel__moa" src="/mochi/happy.webp" alt="MOA">

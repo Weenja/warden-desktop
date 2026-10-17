@@ -15,6 +15,7 @@ use warden_desktop_lib::api::{
 };
 use warden_desktop_lib::config::Config;
 use warden_desktop_lib::guard::Guard;
+use warden_desktop_lib::new_account::{screen_google_sign_in, Screened};
 use warden_desktop_lib::platform::{FrontApp, InstalledApp, Platform};
 use warden_desktop_lib::session::{now_secs, RefreshFn, SecretStore, Session, SessionError, SessionManager};
 use warden_desktop_lib::sync::SyncService;
@@ -359,4 +360,23 @@ async fn drain_loop_charges_locks_and_stops() {
 
     delete_user(&api, &jwt).await;
     std::fs::remove_dir_all(data_dir).ok();
+}
+
+/// The "No account" path of Google sign-in: a brand-new account with no devices is deleted, and
+/// its refresh token dies with it. A fresh anonymous user stands in for the new Google user.
+#[tokio::test]
+#[ignore = "talks to staging"]
+async fn new_empty_account_is_deleted() {
+    let api = api();
+    let tokens = anonymous_user(&api).await;
+    assert!(tokens.user.created_at.is_some(), "GoTrue sends user.created_at");
+    assert!(api.any_device(&tokens.access_token).await.expect("devices read").is_empty());
+
+    let screened = screen_google_sign_in(&api, &tokens, now_secs()).await.expect("screen");
+    assert_eq!(screened, Screened::Deleted);
+
+    match api.refresh(&tokens.refresh_token).await {
+        Ok(_) => panic!("refresh token of a deleted account still works"),
+        Err(e) => println!("refresh after delete: refused ({e})"),
+    }
 }

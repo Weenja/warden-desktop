@@ -10,6 +10,7 @@
     "core:event:allow-unlisten",
     "allow-get-state",
     "allow-sign-in-google",
+    "allow-open-get-warden",
     "allow-send-email-code",
     "allow-verify-email-code",
     "allow-fit-window",

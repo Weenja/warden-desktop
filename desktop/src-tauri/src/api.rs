@@ -61,6 +61,9 @@ pub struct TokenResponse {
 pub struct AuthUser {
     pub id: String,
     pub email: Option<String>,
+    /// When the account was made (RFC 3339, UTC). Used once, right after a Google sign-in, to
+    /// spot an account that the sign-in itself just created (see `new_account.rs`).
+    pub created_at: Option<String>,
 }
 
 // ---------- Device, wallet and block list types ----------
@@ -279,6 +282,27 @@ impl Api {
             .header("apikey", &self.key)
             .bearer_auth(jwt);
         send(req).await
+    }
+
+    /// Up to one of the caller's devices (any platform). RLS (`devices_read`) returns only the
+    /// caller's own rows. Read once after a Google sign-in made a brand-new account, to tell a
+    /// phone user who just set up Warden from an account nobody set up (see `new_account.rs`).
+    pub async fn any_device(&self, jwt: &str) -> Result<Vec<Device>, ApiError> {
+        let req = self
+            .http
+            .get(format!("{}/rest/v1/devices", self.base))
+            .query(&[("select", "id,platform"), ("limit", "1")])
+            .header("apikey", &self.key)
+            .bearer_auth(jwt);
+        send(req).await
+    }
+
+    /// Delete the caller's own account (the same `delete-account` function the phone's
+    /// "Delete account" uses; it only ever acts on the user in the JWT). The desktop calls it
+    /// only for the empty account a Google sign-in just made; see `new_account.rs`.
+    pub async fn delete_account(&self, jwt: &str) -> Result<(), ApiError> {
+        let _: Value = self.function(jwt, "delete-account", &json!({})).await?;
+        Ok(())
     }
 
     /// Replace the guarded list of one kind. Apps are per device (`device` = this computer).

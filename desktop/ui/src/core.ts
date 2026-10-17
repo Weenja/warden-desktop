@@ -41,11 +41,14 @@ export interface UiState {
   shield: ShieldView | null;
 }
 
-export interface AuthResult { ok: boolean; message: string | null }
+/** `no_account`: the Google account has no Warden account (its email, "" if unknown). */
+export interface AuthResult { ok: boolean; message: string | null; no_account: string | null }
 
 export const core = {
   getState: () => invoke<UiState>("get_state"),
-  signInGoogle: () => invoke<void>("sign_in_google"),
+  /** `selectAccount`: Google shows its account chooser ("Use another account"). */
+  signInGoogle: (selectAccount = false) => invoke<void>("sign_in_google", { selectAccount }),
+  openGetWarden: () => invoke<void>("open_get_warden"),
   sendEmailCode: (email: string) => invoke<void>("send_email_code", { email }),
   verifyEmailCode: (email: string, code: string) => invoke<void>("verify_email_code", { email, code }),
   fitWindow: (height: number) => invoke<void>("fit_window", { height }),
