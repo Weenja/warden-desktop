@@ -12,8 +12,11 @@ pub struct Config {
     pub supabase_url: String,
     /// Publishable (anon) key. Sent as the `apikey` header on every request.
     pub publishable_key: String,
-    /// Web page the browser returns to after Google sign-in; it opens `warden://auth-callback`.
-    /// Must be on the project's redirect allow-list.
+    /// Warden's Google OAuth client (the "web" client the Supabase Google provider trusts). Public:
+    /// it is in every sign-in URL.
+    pub google_client_id: String,
+    /// Web page Google returns the browser to after sign-in; it opens `warden://auth-callback`.
+    /// Must be an authorized redirect URI of `google_client_id`.
     pub auth_return_url: String,
 }
 
