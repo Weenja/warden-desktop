@@ -51,6 +51,8 @@ export const core = {
   /** `selectAccount`: Google shows its account chooser ("Use another account"). */
   signInGoogle: (selectAccount = false) => invoke<void>("sign_in_google", { selectAccount }),
   openGetWarden: () => invoke<void>("open_get_warden"),
+  /** "Get extension": the core opens this browser's extension page on getwarden.app. */
+  openExtensionPage: (browserId: string) => invoke<void>("open_extension_page", { browserId }),
   sendEmailCode: (email: string) => invoke<void>("send_email_code", { email }),
   verifyEmailCode: (email: string, code: string) => invoke<void>("verify_email_code", { email, code }),
   fitWindow: (height: number, viewport: number) => invoke<void>("fit_window", { height, viewport }),

@@ -37,6 +37,9 @@
 .status .ico { width: 14px; height: 14px; stroke-width: 2.6; }
 .status--ok { background: var(--mint-c); color: var(--mint); }
 .status--warn { background: var(--amber-c); color: var(--amber); }
+/* "Get extension": the warn chip as a button, so the fix sits where the problem shows */
+.status--get { border: 0; cursor: pointer; }
+.status--get:hover { filter: brightness(1.08); }
 
 /* App icon: coloured rounded square with a glyph (no real logos) */
 .app-icon {

@@ -11,6 +11,7 @@ use tauri_plugin_autostart::ManagerExt as _;
 
 use crate::api::{ApiError, GuardedItem, TokenResponse};
 use crate::auth::{self, looks_like_email, Claim};
+use crate::browser_ext::download;
 use crate::browser_ext::link::{Draining, Facts};
 use crate::drain::{DrainKind, LOW_POINTS};
 use crate::guard::GuardView;
@@ -67,6 +68,36 @@ pub fn sign_in_google(app: AppHandle, state: State<'_, AppState>, select_account
 #[tauri::command]
 pub fn open_get_warden(app: AppHandle) -> Result<(), String> {
     app.opener().open_url(GET_WARDEN_URL, None::<&str>).map_err(|_| "Could not open your browser.".to_string())
+}
+
+/// "Get extension" next to a browser: that browser's extension page on getwarden.app, opened
+/// in that same browser so the store offers the right add-on. Only browsers Warden found on
+/// this computer are accepted, so the UI cannot start other apps.
+#[tauri::command]
+pub async fn open_extension_page(app: AppHandle, state: State<'_, AppState>, browser_id: String) -> Result<(), String> {
+    let found = ui_state(&state).await.browsers.iter().any(|b| b.id == browser_id);
+    if !found {
+        return Err("That browser is not on this computer.".into());
+    }
+    let url = download::extension_page(&browser_id);
+    if open_in_browser(&app, &browser_id, &url) {
+        return Ok(());
+    }
+    app.opener().open_url(&url, None::<&str>).map_err(|_| "Could not open your browser.".to_string())
+}
+
+/// Open `url` in the browser `browser_id`. macOS: by bundle id (`open -b`). Windows: by exe
+/// name, which the opener finds in the App Paths registry key browsers register.
+fn open_in_browser(app: &AppHandle, browser_id: &str, url: &str) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = app;
+        std::process::Command::new("/usr/bin/open").args(["-b", browser_id, url]).status().is_ok_and(|s| s.success())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        app.opener().open_url(url, Some(browser_id)).is_ok()
+    }
 }
 
 #[tauri::command]

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "signin",
-  "description": "Sign-in and linked window: start a sign-in, read the UI state, size and close itself, switch open at login.",
+  "description": "Sign-in and linked window: start a sign-in, read the UI state, open a browser's extension page, size and close itself, switch open at login.",
   "windows": [
     "signin"
   ],
@@ -9,6 +9,7 @@
     "core:event:allow-listen",
     "core:event:allow-unlisten",
     "allow-get-state",
+    "allow-open-extension-page",
     "allow-sign-in-google",
     "allow-open-get-warden",
     "allow-send-email-code",

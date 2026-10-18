@@ -5,6 +5,7 @@ import {
   appTile,
   applyOsWording,
   batteryLevel,
+  browserStatus,
   computerWord,
   crewAvatars,
   followSystemTheme,
@@ -70,11 +71,7 @@ function renderBrowsers(state: UiState): void {
       const name = document.createElement("span");
       name.className = "row__text";
       name.textContent = browser.name;
-      const status = document.createElement("span");
-      status.className = browser.extension ? "status status--ok" : "status status--warn";
-      if (browser.extension) status.append(icon("check"));
-      status.append(browser.extension ? "Linked" : "No extension");
-      row.append(appTile(browser.name, browser.icon, "sm"), name, status);
+      row.append(appTile(browser.name, browser.icon, "sm"), name, browserStatus(browser));
       return row;
     }),
   );
