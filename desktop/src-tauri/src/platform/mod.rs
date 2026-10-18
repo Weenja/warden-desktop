@@ -5,6 +5,8 @@
 use serde::Serialize;
 
 #[cfg(target_os = "macos")]
+mod info_plist;
+#[cfg(target_os = "macos")]
 mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
@@ -21,6 +23,8 @@ mod icon_pixels;
 pub struct FrontApp {
     pub id: String,
     pub name: String,
+    /// A web browser (see "Browsers" below).
+    pub is_browser: bool,
 }
 
 /// An installed app for the picker. `icon_png` is a small PNG (64 px) when the OS has one.
@@ -28,6 +32,8 @@ pub struct FrontApp {
 pub struct InstalledApp {
     pub id: String,
     pub name: String,
+    /// A web browser (see "Browsers" below).
+    pub is_browser: bool,
     #[serde(skip)]
     pub icon_png: Option<Vec<u8>>,
 }
@@ -50,12 +56,12 @@ pub trait Platform: Send + Sync {
     fn device_name(&self) -> String;
 }
 
-/// The process that runs `pid`'s parent, its app id (bundle id on macOS, exe name on Windows)
-/// and its exe file. Used only to check who is on the other end of the browser link.
+/// A process's parent, its app id when it is a browser (bundle id on macOS, exe name on
+/// Windows) and its exe file. Used only to check who is on the other end of the browser link.
 #[cfg(target_os = "macos")]
-use macos::{process_app_id, process_exe, process_parent};
+use macos::{process_browser_id, process_exe, process_parent};
 #[cfg(target_os = "windows")]
-use windows::{process_app_id, process_exe, process_parent};
+use windows::{process_browser_id, process_exe, process_parent};
 
 /// The exe file `name` (without `.exe`) in the folder of this process's own exe. Warden ships
 /// two programs side by side: the app (`warden`) and its native messaging helper
@@ -75,15 +81,15 @@ pub fn runs_exe(pid: u32, path: &std::path::Path) -> bool {
     }
 }
 
-/// The known browser that started process `pid`, walking up its parents (Chrome on Windows
-/// starts hosts through cmd.exe). None when no known browser is above it, e.g. the host was
-/// started by hand from a terminal; such a link never changes what drains.
+/// The browser that started process `pid`, walking up its parents (Chrome on Windows starts
+/// hosts through cmd.exe). None when no browser is above it, e.g. the host was started by hand
+/// from a terminal; such a link never changes what drains.
 pub fn browser_ancestor(pid: u32) -> Option<String> {
     let mut current = pid;
     // A few levels are enough (browser -> cmd.exe -> host); the cap also stops parent-id loops.
     for _ in 0..6 {
         current = process_parent(current).filter(|p| *p > 1 && *p != current)?;
-        if let Some(id) = process_app_id(current).filter(|id| KNOWN_BROWSERS.contains(&id.as_str())) {
+        if let Some(id) = process_browser_id(current) {
             return Some(id);
         }
     }
@@ -108,19 +114,19 @@ pub fn device_platform() -> crate::api::DevicePlatform {
     return crate::api::DevicePlatform::Macos;
 }
 
-/// Browsers Warden knows on this OS. While the user has guarded sites, a browser without the
-/// Warden extension drains the whole time it is in front, because Warden cannot see which
-/// site is open in it.
-#[cfg(target_os = "macos")]
-pub const KNOWN_BROWSERS: &[&str] = MACOS_BROWSERS;
-#[cfg(target_os = "windows")]
-pub const KNOWN_BROWSERS: &[&str] = WINDOWS_BROWSERS;
+// Browsers. While the user has guarded sites, a browser without the Warden extension drains
+// the whole time it is in front, because Warden cannot see which site is open in it. A browser
+// Warden does not count would be a free way around every guarded site, so a fixed list is not
+// enough: each OS says which apps are browsers (macOS: `info_plist.rs`, Windows:
+// `windows/browsers.rs`). The lists below always count too, for a copy the OS does not list.
 
-/// macOS bundle ids.
+/// macOS bundle ids that are always browsers.
+#[cfg(target_os = "macos")]
 pub const MACOS_BROWSERS: &[&str] = &[
     "com.apple.Safari",
     "com.google.Chrome",
     "org.mozilla.firefox",
+    "app.zen-browser.zen",
     "company.thebrowser.Browser",
     "com.microsoft.edgemac",
     "com.brave.Browser",
@@ -128,7 +134,9 @@ pub const MACOS_BROWSERS: &[&str] = &[
     "com.vivaldi.Vivaldi",
 ];
 
-/// Windows exe names, lowercase like every Windows app id. Opera GX runs as opera.exe.
+/// Windows exe names that are always browsers, lowercase like every Windows app id. Opera GX
+/// runs as opera.exe.
+#[cfg(any(target_os = "windows", test))]
 pub const WINDOWS_BROWSERS: &[&str] = &[
     "chrome.exe",
     "msedge.exe",

@@ -78,7 +78,7 @@ mod tests {
     use super::*;
 
     fn app(id: &str, name: &str) -> AppEntry {
-        AppEntry { id: id.into(), name: name.into(), icon: None }
+        AppEntry { id: id.into(), name: name.into(), icon: None, is_browser: false }
     }
 
     #[test]

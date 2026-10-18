@@ -3,7 +3,9 @@
 //! Permissions: none. Reading the frontmost app, asking an app to quit and listing
 //! /Applications need no TCC prompt. Warden does not read window titles or screen contents.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
@@ -14,7 +16,7 @@ use objc2_core_graphics::CGSessionCopyCurrentDictionary;
 use objc2_foundation::{NSBundle, NSDictionary, NSNumber, NSPoint, NSRect, NSSize, NSString};
 use objc2_system_configuration::SCDynamicStore;
 
-use super::{FrontApp, InstalledApp, Platform};
+use super::{info_plist, FrontApp, InstalledApp, Platform, MACOS_BROWSERS};
 
 pub struct MacPlatform;
 
@@ -26,7 +28,8 @@ impl Platform for MacPlatform {
         let app = NSWorkspace::sharedWorkspace().frontmostApplication()?;
         let id = app.bundleIdentifier()?.to_string();
         let name = app.localizedName().map(|n| n.to_string()).unwrap_or_else(|| id.clone());
-        Some(FrontApp { id, name })
+        let is_browser = is_browser(&id, bundle_path(&app).as_deref());
+        Some(FrontApp { id, name, is_browser })
     }
 
     fn terminate_app(&self, id: &str) -> bool {
@@ -103,7 +106,32 @@ fn read_app(path: &Path) -> Option<InstalledApp> {
         .and_then(|v| v.downcast::<NSString>().ok())
         .map(|s| s.to_string())
         .unwrap_or_else(|| path.file_stem().unwrap_or_default().to_string_lossy().into_owned());
-    Some(InstalledApp { id, name, icon_png: icon_png(&path_ns) })
+    let is_browser = is_browser(&id, Some(path));
+    Some(InstalledApp { id, name, is_browser, icon_png: icon_png(&path_ns) })
+}
+
+/// Whether app `id`, installed at `bundle`, is a web browser: a well-known one, or one whose
+/// Info.plist says so. Cached per (id, bundle): the drain loop asks every second. The id is part
+/// of the key so that another app swapped in at the same path is checked again.
+fn is_browser(id: &str, bundle: Option<&Path>) -> bool {
+    static CHECKED: OnceLock<Mutex<HashMap<(String, PathBuf), bool>>> = OnceLock::new();
+    if MACOS_BROWSERS.contains(&id) {
+        return true;
+    }
+    let Some(bundle) = bundle else { return false };
+    let key = (id.to_string(), bundle.to_path_buf());
+    let checked = CHECKED.get_or_init(Default::default);
+    if let Some(known) = checked.lock().unwrap().get(&key) {
+        return *known;
+    }
+    let browser = info_plist::is_web_browser(bundle);
+    checked.lock().unwrap().insert(key, browser);
+    browser
+}
+
+/// Where a running app's bundle is (`/Applications/Zen.app`), wherever it was started from.
+fn bundle_path(app: &NSRunningApplication) -> Option<PathBuf> {
+    Some(PathBuf::from(app.bundleURL()?.path()?.to_string()))
 }
 
 fn icon_png(path: &NSString) -> Option<Vec<u8>> {
@@ -138,10 +166,12 @@ pub(super) fn process_exe(pid: u32) -> Option<PathBuf> {
     Some(PathBuf::from(String::from_utf8(buffer).ok()?))
 }
 
-/// The bundle id of an app process (None for helpers and command-line tools).
-pub(super) fn process_app_id(pid: u32) -> Option<String> {
+/// The bundle id of process `pid` when it is a browser (None for other apps, helpers and
+/// command-line tools).
+pub(super) fn process_browser_id(pid: u32) -> Option<String> {
     let app = NSRunningApplication::runningApplicationWithProcessIdentifier(pid as i32)?;
-    Some(app.bundleIdentifier()?.to_string())
+    let id = app.bundleIdentifier()?.to_string();
+    is_browser(&id, bundle_path(&app).as_deref()).then_some(id)
 }
 
 #[cfg(test)]
@@ -154,6 +184,9 @@ mod tests {
         let safari = apps.iter().find(|a| a.id == "com.apple.Safari").expect("Safari is installed on every Mac");
         assert_eq!(safari.name, "Safari");
         assert!(safari.icon_png.as_ref().is_some_and(|p| p.starts_with(b"\x89PNG")));
+        assert!(safari.is_browser);
+        let calculator = apps.iter().find(|a| a.id == "com.apple.calculator").expect("Calculator is on every Mac");
+        assert!(!calculator.is_browser);
     }
 
     #[test]

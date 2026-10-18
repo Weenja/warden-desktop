@@ -7,7 +7,7 @@
 //! Locations (per user), from the Chrome and MDN native messaging docs:
 //! - macOS: `~/Library/Application Support/<browser folder>/NativeMessagingHosts/<name>.json`,
 //!   only for browsers whose folder exists (we do not create folders for browsers you do not
-//!   have); Firefox reads `~/Library/Application Support/Mozilla/NativeMessagingHosts/`.
+//!   have); Firefox, and Zen with it, reads `~/Library/Application Support/Mozilla/NativeMessagingHosts/`.
 //! - Windows: the JSON files live in Warden's app data folder; a registry key per browser under
 //!   `HKEY_CURRENT_USER\Software\<browser>\NativeMessagingHosts\<name>` points at them.
 
@@ -73,6 +73,9 @@ const MAC_BROWSERS: &[(&str, &str, bool)] = &[
     ("Arc/User Data", "Arc/User Data", false),
     ("Vivaldi", "Vivaldi", false),
     ("Firefox", "Mozilla", true),
+    // Zen is a Firefox fork and keeps Firefox's folder for hosts (Firefox source:
+    // toolkit/xre/nsXREDirProvider.cpp, XRE_USER_NATIVE_MANIFESTS).
+    ("zen", "Mozilla", true),
 ];
 
 /// Write the manifests for every installed browser. Returns the files that now point at `exe`.
@@ -86,6 +89,10 @@ pub fn register(exe: &Path) -> Vec<PathBuf> {
             continue;
         }
         let path = support.join(folder).join("NativeMessagingHosts").join(file_name());
+        // Firefox and Zen share one file.
+        if written.contains(&path) {
+            continue;
+        }
         let manifest = if *firefox { firefox_manifest(exe) } else { chrome_manifest(exe) };
         match write_if_changed(&path, &manifest) {
             Ok(()) => written.push(path),

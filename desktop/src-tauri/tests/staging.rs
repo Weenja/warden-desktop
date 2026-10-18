@@ -221,7 +221,9 @@ struct FakePlatform {
 
 impl FakePlatform {
     fn set_front(&self, id: &str, name: &str) {
-        *self.front.lock().unwrap() = Some(FrontApp { id: id.into(), name: name.into() });
+        // Chrome is the only browser these tests use.
+        let is_browser = id == "com.google.Chrome";
+        *self.front.lock().unwrap() = Some(FrontApp { id: id.into(), name: name.into(), is_browser });
     }
 }
 

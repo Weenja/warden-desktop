@@ -20,7 +20,7 @@ use serde::Serialize;
 
 use crate::api::SpendTarget;
 use crate::browser_ext::link::TabReport;
-use crate::platform::{FrontApp, KNOWN_BROWSERS};
+use crate::platform::FrontApp;
 use crate::sync::BalanceClaims;
 
 /// Send a tick once this much use is collected for the app in front. Between 30 and 60 s keeps
@@ -314,7 +314,7 @@ pub fn guarded_in_front(
             charge: SpendTarget::Target(g.target_id.clone()),
         });
     }
-    if !KNOWN_BROWSERS.contains(&app.id.as_str()) {
+    if !app.is_browser {
         return None;
     }
     if let Some(tab) = extension {
@@ -373,15 +373,15 @@ mod tests {
     }
 
     fn steam() -> FrontApp {
-        FrontApp { id: "com.valvesoftware.steam".into(), name: "Steam".into() }
+        FrontApp { id: "com.valvesoftware.steam".into(), name: "Steam".into(), is_browser: false }
     }
 
     fn chrome() -> FrontApp {
-        FrontApp { id: "com.google.Chrome".into(), name: "Google Chrome".into() }
+        FrontApp { id: "com.google.Chrome".into(), name: "Google Chrome".into(), is_browser: true }
     }
 
     fn finder() -> FrontApp {
-        FrontApp { id: "com.apple.finder".into(), name: "Finder".into() }
+        FrontApp { id: "com.apple.finder".into(), name: "Finder".into(), is_browser: false }
     }
 
     fn guarded() -> Vec<GuardedApp> {
