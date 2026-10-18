@@ -37,8 +37,12 @@ session token (`Authorization: Bearer ...`). Tokens are kept in the OS keychain 
   is its own host program started by a browser; nothing else can join.
 - **Host manifests.** At each start the app writes small JSON files that tell your browsers where the host
   program is and which extension may start it: macOS `~/Library/Application Support/<browser>/NativeMessagingHosts/in.weenja.warden.staging.json`
-  (only for browsers you have); Windows two files in the app data folder plus a per-user registry key per browser
+  (only for browsers you have; Firefox and Zen share `Mozilla`); Windows two files in the app data folder plus a per-user registry key per browser
   (`HKEY_CURRENT_USER\Software\<browser>\NativeMessagingHosts\in.weenja.warden.staging`).
+- **Which apps are browsers.** So that every browser drains while you have guarded sites, the app checks
+  which apps can show web sites: on macOS it reads each app's `Info.plist` (does it open web links and HTML
+  files); on Windows it reads the list of installed browsers that Settings > Default apps uses
+  (`Clients\StartMenuInternet` in the registry) and the name built into each exe file.
 
 "Get Warden for your phone" opens https://getwarden.app in your browser; the app itself sends nothing there.
 

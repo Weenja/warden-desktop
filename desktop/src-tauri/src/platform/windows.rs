@@ -5,6 +5,7 @@
 //! window titles or screen contents.
 
 mod apps;
+mod browsers;
 mod icon;
 
 use std::collections::HashMap;
@@ -33,7 +34,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::exe_names::{exe_id, exe_stem};
-use super::{FrontApp, InstalledApp, Platform, KNOWN_BROWSERS};
+use super::{FrontApp, InstalledApp, Platform};
 
 pub struct WindowsPlatform;
 
@@ -59,7 +60,7 @@ impl Platform for WindowsPlatform {
         if pid == unsafe { GetCurrentProcessId() } {
             return None;
         }
-        Some(FrontApp { id: exe_id(&path)?, name: app_name(&path) })
+        Some(FrontApp { id: exe_id(&path)?, name: app_name(&path), is_browser: browsers::is_browser_exe(&path) })
     }
 
     fn terminate_app(&self, id: &str) -> bool {
@@ -72,11 +73,13 @@ impl Platform for WindowsPlatform {
         // never point the force-close at another program.
         let processes: Vec<Handle> =
             pids.iter().filter_map(|pid| Handle::process(PROCESS_SYNCHRONIZE | PROCESS_TERMINATE, *pid)).collect();
+        let is_browser =
+            pids.iter().find_map(|pid| process_path(*pid)).is_some_and(|path| browsers::is_browser_exe(&path));
         close_windows_of(&pids);
         // Browsers hold many tabs and only drain through the whole-browser rule, so they are
         // only asked. Guarded apps are ended if they ignore the request: at 0 points the app
         // must close, and a "Save changes?" prompt would otherwise keep it open for free.
-        if !KNOWN_BROWSERS.contains(&id) {
+        if !is_browser {
             std::thread::spawn(move || end_after_timeout(processes));
         }
         true
@@ -161,13 +164,14 @@ fn app_name(path: &str) -> String {
     if let Some(name) = names.lock().unwrap().get(path) {
         return name.clone();
     }
-    let name = file_description(path).unwrap_or_else(|| exe_stem(path).to_string());
+    let name = version_string(path, "FileDescription").unwrap_or_else(|| exe_stem(path).to_string());
     names.lock().unwrap().insert(path.to_string(), name.clone());
     name
 }
 
-/// FileDescription from the exe's version resource, in the first language the file lists.
-pub(super) fn file_description(path: &str) -> Option<String> {
+/// A text field (`FileDescription`, `OriginalFilename`) from the exe's version resource, in the
+/// first language the file lists.
+fn version_string(path: &str, field: &str) -> Option<String> {
     let path = HSTRING::from(path);
     let size = unsafe { GetFileVersionInfoSizeW(&path, None) };
     if size == 0 {
@@ -182,7 +186,7 @@ pub(super) fn file_description(path: &str) -> Option<String> {
         .filter(|words| words.len() >= 2)
         .map(|words| (words[0], words[1]))
         .unwrap_or((0x0409, 0x04B0));
-    let key = format!(r"\StringFileInfo\{language:04x}{code_page:04x}\FileDescription");
+    let key = format!(r"\StringFileInfo\{language:04x}{code_page:04x}\{field}");
     let text = String::from_utf16_lossy(&version_value(&block, &key)?);
     let text = text.trim_end_matches('\0').trim();
     (!text.is_empty()).then(|| text.to_string())
@@ -285,28 +289,28 @@ fn computer_name() -> Option<String> {
     (!name.is_empty()).then_some(name)
 }
 
-/// (parent pid, exe file name) of a running process, from a process snapshot. Works for
-/// elevated processes too, which a normal user cannot open.
-fn process_entry(pid: u32) -> Option<(u32, String)> {
+/// The parent pid of a running process, from a process snapshot. Works for elevated
+/// processes too, which a normal user cannot open.
+pub(super) fn process_parent(pid: u32) -> Option<u32> {
     let snapshot = Handle(unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }.ok()?);
     let mut entry = PROCESSENTRY32W { dwSize: size_of::<PROCESSENTRY32W>() as u32, ..Default::default() };
     let mut more = unsafe { Process32FirstW(snapshot.0, &mut entry) }.is_ok();
     while more {
         if entry.th32ProcessID == pid {
-            let len = entry.szExeFile.iter().position(|c| *c == 0).unwrap_or(entry.szExeFile.len());
-            return Some((entry.th32ParentProcessID, String::from_utf16_lossy(&entry.szExeFile[..len])));
+            return Some(entry.th32ParentProcessID);
         }
         more = unsafe { Process32NextW(snapshot.0, &mut entry) }.is_ok();
     }
     None
 }
 
-pub(super) fn process_parent(pid: u32) -> Option<u32> {
-    process_entry(pid).map(|(parent, _)| parent)
-}
-
-pub(super) fn process_app_id(pid: u32) -> Option<String> {
-    process_entry(pid).and_then(|(_, exe)| exe_id(&exe))
+/// The exe id of process `pid` when it is a browser.
+pub(super) fn process_browser_id(pid: u32) -> Option<String> {
+    let path = process_path(pid)?;
+    if !browsers::is_browser_exe(&path) {
+        return None;
+    }
+    exe_id(&path)
 }
 
 pub(super) fn process_exe(pid: u32) -> Option<std::path::PathBuf> {

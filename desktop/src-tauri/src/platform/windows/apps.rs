@@ -14,6 +14,7 @@ use windows::Win32::UI::Shell::{
 };
 use windows_registry::{Key, CURRENT_USER, LOCAL_MACHINE};
 
+use super::browsers::browser_ids;
 use super::icon::exe_icon_png;
 use crate::platform::exe_names::{dedupe_by_id, display_icon_exe, exe_id, is_setup_helper, squirrel_app};
 use crate::platform::InstalledApp;
@@ -44,9 +45,15 @@ pub fn installed_apps() -> Vec<InstalledApp> {
     let mut found = dedupe_by_id(found, |app| &app.id);
     found.sort_by_key(|app| app.name.to_lowercase());
 
+    let browsers = browser_ids();
     found
         .into_iter()
-        .map(|app| InstalledApp { icon_png: exe_icon_png(&app.icon.0, app.icon.1), id: app.id, name: app.name })
+        .map(|app| InstalledApp {
+            icon_png: exe_icon_png(&app.icon.0, app.icon.1),
+            is_browser: browsers.contains(&app.id),
+            id: app.id,
+            name: app.name,
+        })
         .collect()
 }
 

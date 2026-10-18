@@ -49,6 +49,20 @@ fn strip_icon_index(value: &str) -> &str {
     }
 }
 
+/// The exe a registry command line starts, which is a path, quoted when it has spaces, then
+/// arguments: `"C:\Program Files\Zen Browser\zen.exe" -osint -url "%1"` ->
+/// `C:\Program Files\Zen Browser\zen.exe`. An unquoted path ends at its `.exe`.
+pub fn command_exe(command: &str) -> Option<String> {
+    let command = command.trim();
+    let path = match command.strip_prefix('"') {
+        Some(rest) => rest.split('"').next().unwrap_or(rest),
+        // Lowercasing ASCII keeps every byte position, so `end` is valid in `command` too.
+        None => &command[..command.to_ascii_lowercase().find(".exe")? + ".exe".len()],
+    };
+    exe_id(path)?;
+    Some(path.to_string())
+}
+
 /// Apps installed with Squirrel (Discord, Slack, Teams classic) have Start-menu shortcuts to
 /// `Update.exe --processStart "Discord.exe"`; the process that runs, and that Warden sees in
 /// front, is `Discord.exe`. Returns that exe's id, or None for any other shortcut.
@@ -121,6 +135,21 @@ mod tests {
         assert_eq!(display_icon_exe(r"C:\Me, Myself\app.exe").as_deref(), Some(r"C:\Me, Myself\app.exe"));
         assert_eq!(display_icon_exe(r"C:\App\app.ico"), None);
         assert_eq!(display_icon_exe(r"C:\Windows\System32\shell32.dll,4"), None);
+    }
+
+    #[test]
+    fn command_exe_finds_the_program_of_a_command_line() {
+        assert_eq!(
+            command_exe(r#""C:\Program Files\Zen Browser\zen.exe" -osint -url "%1""#).as_deref(),
+            Some(r"C:\Program Files\Zen Browser\zen.exe")
+        );
+        assert_eq!(
+            command_exe(r#""C:\Program Files\Google\Chrome\Application\chrome.exe""#).as_deref(),
+            Some(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
+        );
+        assert_eq!(command_exe(r"C:\Apps\Browser.EXE --new-window").as_deref(), Some(r"C:\Apps\Browser.EXE"));
+        assert_eq!(command_exe(r#""C:\Apps\launch.cmd" "%1""#), None);
+        assert_eq!(command_exe(""), None);
     }
 
     #[test]

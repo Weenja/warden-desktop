@@ -83,6 +83,8 @@ objc2-core-graphics = "0.3"
 tauri-nspanel = "2.1"
 # proc_pidinfo / proc_pidpath: the browser link checks which process connected (see platform).
 libc = "0.2"
+# Reads apps' Info.plist to find every web browser (platform/info_plist.rs). Already used by Tauri.
+plist = "1"
 objc2-system-configuration = { version = "0.3", default-features = false, features = ["std", "SCDynamicStore", "SCDynamicStoreCopySpecific"] }
 
 [dev-dependencies]

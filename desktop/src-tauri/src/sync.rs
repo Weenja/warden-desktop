@@ -22,7 +22,7 @@ use crate::api::{
 use crate::config::APP_VERSION;
 use crate::drain::GuardedApp;
 use crate::guard::{DrainView, GuardView, ShieldView};
-use crate::platform::{self, Platform, KNOWN_BROWSERS};
+use crate::platform::{self, Platform};
 use crate::session::{now_secs, SessionError, SessionManager};
 
 /// The crew sees a device that stays silent for hours as "went dark". One heartbeat a minute
@@ -88,6 +88,8 @@ pub struct AppEntry {
     pub name: String,
     /// `data:image/png;base64,...`, so the UI needs no file access.
     pub icon: Option<String>,
+    /// A web browser: listed in the popover with its extension state.
+    pub is_browser: bool,
 }
 
 /// An installed browser for the popover, and whether the Warden extension is linked in it.
@@ -315,6 +317,7 @@ impl SyncService {
                 icon: app.icon_png.map(|png| format!("data:image/png;base64,{}", STANDARD.encode(png))),
                 id: app.id,
                 name: app.name,
+                is_browser: app.is_browser,
             })
             .collect();
         self.state.lock().unwrap().apps = apps;
@@ -357,7 +360,7 @@ impl SyncService {
         let browsers = state
             .apps
             .iter()
-            .filter(|a| KNOWN_BROWSERS.contains(&a.id.as_str()))
+            .filter(|a| a.is_browser)
             .map(|a| BrowserView {
                 id: a.id.clone(),
                 name: a.name.clone(),
