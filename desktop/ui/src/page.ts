@@ -1,5 +1,5 @@
 // Shared page helpers: OS theme, OS wording, element lookup, window sizing.
-import { core } from "./core";
+import { core, type Browser } from "./core";
 
 /** Follow the OS light/dark setting live. tokens.css is dark first; light sets data-theme. */
 export function followSystemTheme(): void {
@@ -79,6 +79,23 @@ export function appTile(name: string, iconUrl: string | null, size: "" | "sm" = 
   img.alt = "";
   tile.append(img);
   return tile;
+}
+
+/** "Linked" when the browser has the Warden extension, else a "Get extension" button that
+ *  opens the extension page in that browser. */
+export function browserStatus(browser: Browser): HTMLElement {
+  if (browser.extension) {
+    const linked = document.createElement("span");
+    linked.className = "status status--ok";
+    linked.append(icon("check"), "Linked");
+    return linked;
+  }
+  const get = document.createElement("button");
+  get.className = "status status--warn status--get";
+  get.title = `No Warden extension in ${browser.name}`;
+  get.append("Get extension", icon("out"));
+  get.addEventListener("click", () => void core.openExtensionPage(browser.id));
+  return get;
 }
 
 /** Same low threshold as the phone and the drain pill: 10 points or less. */

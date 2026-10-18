@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "popover",
-  "description": "Menu bar popover: read the UI state, size itself, reopen sign-in, open the picker and the quit confirm.",
+  "description": "Menu bar popover: read the UI state, size itself, reopen sign-in, open a browser's extension page, open the picker and the quit confirm.",
   "windows": [
     "popover"
   ],
@@ -9,6 +9,7 @@
     "core:event:allow-listen",
     "core:event:allow-unlisten",
     "allow-get-state",
+    "allow-open-extension-page",
     "allow-fit-window",
     "allow-open-signin",
     "allow-open-picker",

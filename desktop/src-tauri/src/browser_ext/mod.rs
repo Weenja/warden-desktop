@@ -12,6 +12,7 @@
 //!
 //! The browsers find the host through small JSON manifests written at every start ([`manifest`]).
 
+pub mod download;
 pub mod endpoint;
 pub mod frame;
 pub mod host;

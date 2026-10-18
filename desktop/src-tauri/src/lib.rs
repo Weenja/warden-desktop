@@ -83,6 +83,7 @@ pub fn run() {
             commands::get_state,
             commands::sign_in_google,
             commands::open_get_warden,
+            commands::open_extension_page,
             commands::send_email_code,
             commands::verify_email_code,
             commands::fit_window,

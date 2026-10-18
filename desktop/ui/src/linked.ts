@@ -1,6 +1,6 @@
 // "This Mac is linked": the device name, the browsers found and the extension note.
 import { core, type UiState } from "./core";
-import { $, appTile, applyOsWording, followSystemTheme, fitWindowToContent, isWindows } from "./page";
+import { $, appTile, applyOsWording, browserStatus, followSystemTheme, fitWindowToContent, isWindows } from "./page";
 
 followSystemTheme();
 applyOsWording();
@@ -16,11 +16,7 @@ function render(state: UiState): void {
       const name = document.createElement("span");
       name.className = "row__text row__title";
       name.textContent = browser.name;
-      // The extension does not exist yet, so every browser drains while it is in front.
-      const status = document.createElement("span");
-      status.className = "status status--warn";
-      status.textContent = "No extension";
-      li.append(appTile(browser.name, browser.icon), name, status);
+      li.append(appTile(browser.name, browser.icon), name, browserStatus(browser));
       return li;
     }),
   );
