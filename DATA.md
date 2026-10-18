@@ -5,7 +5,8 @@ Sign-in with Google happens in your own browser; the app never sees your Google 
 No analytics, no telemetry, no crash reporting.
 
 Every request carries the public `apikey` (the publishable key) and, once signed in, your
-session token (`Authorization: Bearer ...`). Tokens are kept in the OS keychain only.
+session token (`Authorization: Bearer ...`). The refresh token is kept in the OS keychain; the
+access token (valid one hour) is kept in memory only, and a new one is fetched when the app starts.
 
 | When | Endpoint | Fields sent |
 |---|---|---|

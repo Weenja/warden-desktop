@@ -1,8 +1,8 @@
 //! The signed-in session: kept in the OS keychain, refreshed before it expires.
 //!
 //! Security rules:
-//! - Tokens live in the keychain (macOS Keychain / Windows Credential Manager) and in memory.
-//!   They are never written to files, logs or the UI.
+//! - The refresh token lives in the keychain (macOS Keychain / Windows Credential Manager); the
+//!   access token lives in memory only. Neither is ever written to files, logs or the UI.
 //! - Refresh tokens rotate: each refresh returns a new one and the old one dies. Two parallel
 //!   refreshes would race and one would fail, so refreshing is single-flight: callers queue on
 //!   one lock and the first one refreshes for all of them.
@@ -21,7 +21,7 @@ use crate::api::{ApiError, TokenResponse};
 /// that dies in flight.
 const REFRESH_MARGIN_SECS: i64 = 120;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Session {
     pub access_token: String,
     pub refresh_token: String,
@@ -40,6 +40,38 @@ impl Session {
             expires_at,
             user_id: t.user.id,
             email: t.user.email,
+        }
+    }
+}
+
+/// The part of the session the keychain keeps. Windows Credential Manager holds at most 2560
+/// bytes per item (1280 UTF-16 characters), and a Supabase access token alone is often longer.
+/// The access token lives one hour anyway, so after a restart the app gets a new one with the
+/// refresh token. Older saved items that still hold the access token load fine: serde skips it.
+#[derive(Serialize, Deserialize)]
+struct SavedSession {
+    refresh_token: String,
+    user_id: String,
+    email: Option<String>,
+}
+
+impl SavedSession {
+    fn from_session(session: &Session) -> SavedSession {
+        SavedSession {
+            refresh_token: session.refresh_token.clone(),
+            user_id: session.user_id.clone(),
+            email: session.email.clone(),
+        }
+    }
+
+    /// A session with no access token, already expired, so the first request refreshes it.
+    fn into_session(self) -> Session {
+        Session {
+            access_token: String::new(),
+            refresh_token: self.refresh_token,
+            expires_at: 0,
+            user_id: self.user_id,
+            email: self.email,
         }
     }
 }
@@ -125,7 +157,7 @@ impl SessionManager {
     /// Read the saved session at startup. A broken or unreadable item counts as signed out.
     pub async fn load(&self) -> Result<bool, SessionError> {
         let saved = self.store.load()?;
-        let session = saved.and_then(|s| serde_json::from_str::<Session>(&s).ok());
+        let session = saved.and_then(|s| serde_json::from_str::<SavedSession>(&s).ok()).map(SavedSession::into_session);
         let signed_in = session.is_some();
         *self.current.lock().await = session;
         Ok(signed_in)
@@ -201,7 +233,7 @@ impl SessionManager {
     }
 
     fn persist(&self, session: &Session) -> Result<(), SessionError> {
-        let json = serde_json::to_string(session).expect("session serializes");
+        let json = serde_json::to_string(&SavedSession::from_session(session)).expect("session serializes");
         self.store.save(&json)
     }
 }
@@ -289,9 +321,28 @@ mod tests {
         }
         assert_eq!(calls.load(Ordering::SeqCst), 1, "exactly one refresh for eight callers");
 
-        let saved: Session = serde_json::from_str(&mgr.store.load().unwrap().unwrap()).unwrap();
+        let saved: SavedSession = serde_json::from_str(&mgr.store.load().unwrap().unwrap()).unwrap();
         assert_eq!(saved.refresh_token, "r0+1", "rotated refresh token is persisted");
         assert_eq!(saved.email.as_deref(), Some("sam@example.com"), "email survives a refresh");
+    }
+
+    #[tokio::test]
+    async fn saved_item_fits_windows_and_a_restart_refreshes() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let mgr = SessionManager::new(Box::<MemoryStore>::default(), counting_refresh(calls.clone()));
+        let long_jwt = "x".repeat(2_000);
+        mgr.set(session(&long_jwt, "r0", now_secs() + 3600)).await.unwrap();
+
+        let saved = mgr.store.load().unwrap().unwrap();
+        assert!(!saved.contains(&long_jwt), "the access token stays out of the keychain");
+        assert!(saved.encode_utf16().count() <= 1280, "fits one Windows Credential Manager item");
+
+        let restarted =
+            SessionManager::new(Box::new(MemoryStore(StdMutex::new(Some(saved)))), counting_refresh(calls.clone()));
+        assert!(restarted.load().await.unwrap());
+        assert_eq!(restarted.email().await.as_deref(), Some("sam@example.com"));
+        assert_eq!(restarted.access_token().await.unwrap(), "a1", "first request after a restart refreshes");
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
 
     #[tokio::test]
