@@ -2,6 +2,8 @@
 
 Updated 2026-10-18 (browser extension link); 2026-10-17 (builder 1: foundation; builder 2: macOS drain, pill, shield, picker, quit, autostart). Staging build by default: "Warden β", `in.weenja.warden.desktop.staging`.
 
+**Before the first prod build:** follow "Desktop app: Google sign-in on prod" in the private repo `warden/RELEASING.md` (prod Google secret + `https://getwarden.app/auth` on the prod allow-list, `config/prod.json` with `auth_return_url`, one app per `warden://` scheme, click test).
+
 ## Works
 - Tauri v2 tray-only app: no Dock icon (`LSUIElement` + `ActivationPolicy::Accessory`), MOA template icon in the menu bar, popover under the icon (hides on blur), single instance, strict CSP, per-window capabilities (`src-tauri/capabilities/`).
 - UI ported from `mockups/desktop/` with OS light/dark: sign-in (Google + email code; Apple hidden), "This Mac is linked", popover (balance, battery, guarded apps, sites, browsers, crew line, Quit). Alignment fixes are marked `fix:` in `ui/styles/ui.css`.
