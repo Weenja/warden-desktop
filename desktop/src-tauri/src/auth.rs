@@ -3,7 +3,10 @@
 //! Google flow:
 //! 1. We make a random `verifier` and send only its SHA-256 (`challenge`) in the authorize URL.
 //! 2. The user signs in in their own browser (we never see the password).
-//! 3. Supabase redirects to `warden://auth-callback?code=...`; the OS hands that URL to us.
+//! 3. Supabase redirects the browser to Warden's web page (`auth_return_url`, e.g.
+//!    `https://getwarden.app/auth?code=...`). That page shows "You're signed in" and opens
+//!    `warden://auth-callback?code=...`; the OS hands that URL to us. (Redirecting straight to
+//!    `warden://` worked too, but left the browser tab dimmed on Google's page forever.)
 //! 4. We trade `code` + `verifier` for a session. A code intercepted by another app is useless
 //!    without the verifier, which never left this process.
 
@@ -15,9 +18,6 @@ use base64::Engine;
 use rand::RngCore;
 use sha2::{Digest, Sha256};
 use url::Url;
-
-/// The only redirect the Supabase project allows (`uri_allow_list`).
-pub const REDIRECT_URI: &str = "warden://auth-callback";
 
 /// A browser sign-in older than this is abandoned; its verifier is dropped.
 const PENDING_TTL: Duration = Duration::from_secs(10 * 60);
@@ -47,11 +47,18 @@ impl Pkce {
 /// the provider (what supabase-js `signInWithOAuth({ options: { queryParams } })` does), so
 /// Google shows its account chooser instead of reusing the account the browser is signed in to.
 /// Used by "Use another account" after a sign-in with an account that has no Warden.
-pub fn authorize_url(supabase_url: &str, provider: &str, challenge: &str, select_account: bool) -> Url {
+/// `return_url` must be on the Supabase project's redirect allow-list (`uri_allow_list`).
+pub fn authorize_url(
+    supabase_url: &str,
+    return_url: &str,
+    provider: &str,
+    challenge: &str,
+    select_account: bool,
+) -> Url {
     let mut url = Url::parse(&format!("{supabase_url}/auth/v1/authorize")).expect("valid Supabase URL");
     url.query_pairs_mut()
         .append_pair("provider", provider)
-        .append_pair("redirect_to", REDIRECT_URI)
+        .append_pair("redirect_to", return_url)
         .append_pair("code_challenge", challenge)
         .append_pair("code_challenge_method", "s256");
     if select_account {
@@ -93,19 +100,46 @@ pub fn parse_callback(raw: &str) -> Result<String, CallbackError> {
 /// The verifier of the browser sign-in in progress, if any. Starting again replaces it, so
 /// only the latest browser tab can finish.
 #[derive(Default)]
-pub struct PendingSignIn(Mutex<Option<(String, Instant)>>);
+pub struct PendingSignIn(Mutex<PendingState>);
+
+#[derive(Default)]
+struct PendingState {
+    verifier: Option<(String, Instant)>,
+    /// The code that used the last verifier. The web page's "Open Warden" button sends the same
+    /// link again; we recognise it and only bring Warden forward instead of showing an error.
+    used_code: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Claim {
+    /// A new code: trade it with this verifier.
+    Fresh(String),
+    /// The code we already traded (or are trading right now).
+    Repeat,
+    /// No sign-in is waiting, or it is older than [`PENDING_TTL`].
+    Expired,
+}
 
 impl PendingSignIn {
     pub fn start(&self) -> Pkce {
         let pkce = Pkce::generate();
-        *self.0.lock().unwrap() = Some((pkce.verifier.clone(), Instant::now()));
+        self.0.lock().unwrap().verifier = Some((pkce.verifier.clone(), Instant::now()));
         pkce
     }
 
-    /// Take the verifier once; a replayed callback finds nothing.
-    pub fn take(&self) -> Option<String> {
-        let (verifier, started) = self.0.lock().unwrap().take()?;
-        (started.elapsed() < PENDING_TTL).then_some(verifier)
+    /// Take the verifier once for `code`; a replayed callback never gets it again.
+    pub fn claim(&self, code: &str) -> Claim {
+        let mut state = self.0.lock().unwrap();
+        if state.used_code.as_deref() == Some(code) {
+            return Claim::Repeat;
+        }
+        match state.verifier.take() {
+            Some((verifier, started)) if started.elapsed() < PENDING_TTL => {
+                state.used_code = Some(code.to_string());
+                Claim::Fresh(verifier)
+            }
+            _ => Claim::Expired,
+        }
     }
 }
 
@@ -133,13 +167,13 @@ mod tests {
 
     #[test]
     fn authorize_url_carries_redirect_and_challenge() {
-        let url = authorize_url("https://x.supabase.co", "google", "abc", false);
+        let url = authorize_url("https://x.supabase.co", "https://getwarden.app/auth", "google", "abc", false);
         let q: Vec<_> = url.query_pairs().into_owned().collect();
-        assert!(q.contains(&("redirect_to".into(), "warden://auth-callback".into())));
+        assert!(q.contains(&("redirect_to".into(), "https://getwarden.app/auth".into())));
         assert!(q.contains(&("code_challenge_method".into(), "s256".into())));
         assert!(!q.iter().any(|(k, _)| k == "prompt"));
         assert_eq!(url.path(), "/auth/v1/authorize");
-        let chooser = authorize_url("https://x.supabase.co", "google", "abc", true);
+        let chooser = authorize_url("https://x.supabase.co", "https://getwarden.app/auth", "google", "abc", true);
         assert!(chooser.query_pairs().any(|(k, v)| k == "prompt" && v == "select_account"));
     }
 
@@ -158,9 +192,15 @@ mod tests {
     #[test]
     fn pending_verifier_is_single_use() {
         let pending = PendingSignIn::default();
+        assert_eq!(pending.claim("c1"), Claim::Expired);
         let pkce = pending.start();
-        assert_eq!(pending.take(), Some(pkce.verifier));
-        assert_eq!(pending.take(), None);
+        assert_eq!(pending.claim("c1"), Claim::Fresh(pkce.verifier));
+        // "Open Warden" on the web page sends the same code again
+        assert_eq!(pending.claim("c1"), Claim::Repeat);
+        // another code never gets the used verifier
+        assert_eq!(pending.claim("c2"), Claim::Expired);
+        let next = pending.start();
+        assert_eq!(pending.claim("c2"), Claim::Fresh(next.verifier));
     }
 
     #[test]

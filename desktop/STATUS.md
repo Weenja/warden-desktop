@@ -16,7 +16,7 @@ Updated 2026-10-18 (browser extension link); 2026-10-17 (builder 1: foundation; 
 - dev-tools add_points 5 -> 300 s. spend-tick 60 s -> charged 60, 300 -> 240. Retry with the same evidence -> charged 0, balance 240.
 - refresh rotation: r0 -> r1 -> r2 all distinct. Reusing r0 right away is still ACCEPTED (GoTrue reuse interval), so the app never relies on reuse failing.
 - single-flight against staging: 8 callers on an expired session -> 1 refresh, 1 token.
-- Deep link: the debug .app receives `open warden://auth-callback?code=...`; a link with no sign-in started is refused ("This sign-in link has expired").
+- Deep link: the debug .app receives `open warden://auth-callback?code=...`; a link with no sign-in started is refused ("This sign-in link has expired"), unless the app is already signed in or the code is the one it just used (the web page's "Open Warden" button): then it only shows the popover / sign-in window.
 - Google authorize: `/auth/v1/authorize?provider=google&redirect_to=warden://auth-callback&...` -> 302 to accounts.google.com (client 243483196176-qda4…, redirect_uri = the Supabase callback) -> 200 "Sign in - Google Accounts". No `redirect_uri_mismatch`, no `invalid_client`. The real click is for Jojo.
 
 ## Google sign-in with no Warden account (2026-10-18)
@@ -33,7 +33,8 @@ npm run tauri dev                       # tray icon + sign-in window (dev server
 npm run tauri build -- --debug --bundles app
 open "src-tauri/target/debug/bundle/macos/Warden β.app"
 ```
-Sign-in with Google needs the bundled app: macOS only routes `warden://` links to an installed .app bundle, not to `tauri dev`. Open the .app once (LaunchServices registers the scheme), click Continue with Google, finish in the browser, allow "Open Warden β".
+Sign-in with Google needs the bundled app: macOS only routes `warden://` links to an installed .app bundle, not to `tauri dev`. Open the .app once (LaunchServices registers the scheme), click Continue with Google, finish in the browser. Since 2026-10-18 Supabase returns the browser to `https://staging.getwarden.app/auth` (config `auth_return_url`, on the staging redirect allow-list); that page opens `warden://auth-callback` and shows "You're signed in" (before, the tab stayed dimmed on Google's page). Allow "Open Warden β" once (tick "Always allow").
+- 2026-10-18: Google sign-in had failed with "Unable to exchange external code" because the staging project held a wrong Google client secret (log: `invalid_client`); fixed in the staging auth config.
 Email codes need custom SMTP on Supabase first (staging has none, so codes only reach team addresses).
 
 ## Checks

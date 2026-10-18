@@ -10,7 +10,7 @@ use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_autostart::ManagerExt as _;
 
 use crate::api::{ApiError, GuardedItem, TokenResponse};
-use crate::auth::{self, looks_like_email};
+use crate::auth::{self, looks_like_email, Claim};
 use crate::browser_ext::link::{Draining, Facts};
 use crate::drain::{DrainKind, LOW_POINTS};
 use crate::guard::GuardView;
@@ -53,7 +53,13 @@ async fn ui_state(state: &AppState) -> UiState {
 #[tauri::command]
 pub fn sign_in_google(app: AppHandle, state: State<'_, AppState>, select_account: Option<bool>) -> Result<(), String> {
     let pkce = state.pending.start();
-    let url = auth::authorize_url(state.api.base_url(), "google", &pkce.challenge, select_account.unwrap_or(false));
+    let url = auth::authorize_url(
+        state.api.base_url(),
+        &state.auth_return_url,
+        "google",
+        &pkce.challenge,
+        select_account.unwrap_or(false),
+    );
     app.opener().open_url(url.as_str(), None::<&str>).map_err(|_| "Could not open your browser.".to_string())
 }
 
@@ -265,13 +271,16 @@ pub async fn handle_auth_callback(app: &AppHandle, state: &AppState, url: &str) 
     let outcome = match auth::parse_callback(url) {
         Err(auth::CallbackError::NotOurs) => return,
         Err(e) => GoogleOutcome::Failed(e.to_string()),
-        Ok(code) => match state.pending.take() {
-            // No sign-in started here (or it expired): ignore links we did not ask for.
-            None => GoogleOutcome::Failed("This sign-in link has expired. Try again.".to_string()),
-            Some(verifier) => match state.api.exchange_pkce(&code, &verifier).await {
+        Ok(code) => match state.pending.claim(&code) {
+            Claim::Fresh(verifier) => match state.api.exchange_pkce(&code, &verifier).await {
                 Ok(tokens) => finish_google_sign_in(app, state, tokens).await,
                 Err(e) => GoogleOutcome::Failed(friendly_auth_error(&e)),
             },
+            // The web page's "Open Warden" button sent the same link again: just show Warden.
+            Claim::Repeat => return bring_forward(app, state).await,
+            // A stale link while signed in (e.g. that button after a restart): no error either.
+            Claim::Expired if state.sync.session().is_signed_in().await => return bring_forward(app, state).await,
+            Claim::Expired => GoogleOutcome::Failed("This sign-in link has expired. Try again.".to_string()),
         },
     };
     let payload = match outcome {
@@ -287,6 +296,19 @@ pub async fn handle_auth_callback(app: &AppHandle, state: &AppState, url: &str) 
     }
     let _ = ui_windows::open_signin(app);
     let _ = app.emit_to(ui_windows::SIGNIN, AUTH_EVENT, payload);
+}
+
+/// Show Warden without a sign-in result: the popover when signed in, else the sign-in window
+/// (which keeps waiting for the sign-in in progress).
+async fn bring_forward(app: &AppHandle, state: &AppState) {
+    let shown = if state.sync.session().is_signed_in().await {
+        ui_windows::open_popover(app)
+    } else {
+        ui_windows::open_signin(app)
+    };
+    if let Err(e) = shown {
+        log::warn!("show app: {e}");
+    }
 }
 
 /// Google can create an account during sign-in (email cannot: `create_user: false`). Check for

@@ -37,6 +37,8 @@ pub struct AppState {
     /// Linked browser extensions (native messaging, see `browser_ext`).
     pub links: Arc<Links>,
     pub pending: PendingSignIn,
+    /// Where the browser lands after Google sign-in (see `auth.rs`).
+    pub auth_return_url: String,
 }
 
 /// The session manager with refresh through the Warden API. The app stores the session in the
@@ -112,7 +114,14 @@ pub fn run() {
             let sync = Arc::new(SyncService::new(api.clone(), session, platform, &data_dir));
             let (links, link_events) = Links::new();
             let guard = Guard::new(sync.clone(), links.clone(), &identifier);
-            app.manage(AppState { api, sync, guard, links: links.clone(), pending: PendingSignIn::default() });
+            app.manage(AppState {
+                api,
+                sync,
+                guard,
+                links: links.clone(),
+                pending: PendingSignIn::default(),
+                auth_return_url: config.auth_return_url.clone(),
+            });
             register_native_host(&data_dir);
             tauri::async_runtime::spawn(browser_ext::server::serve(links));
 

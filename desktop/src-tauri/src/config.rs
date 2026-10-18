@@ -12,6 +12,9 @@ pub struct Config {
     pub supabase_url: String,
     /// Publishable (anon) key. Sent as the `apikey` header on every request.
     pub publishable_key: String,
+    /// Web page the browser returns to after Google sign-in; it opens `warden://auth-callback`.
+    /// Must be on the project's redirect allow-list.
+    pub auth_return_url: String,
 }
 
 /// The staging backend. Prod gets its own `config/prod.json` once it is approved.

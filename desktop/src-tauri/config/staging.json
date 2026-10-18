@@ -1,4 +1,5 @@
 {
   "supabase_url": "https://kgsrczwqhqcjdbeanlhh.supabase.co",
-  "publishable_key": "sb_publishable_9bMuN208fLWpQv0l0jq50w_7NV95sKh"
+  "publishable_key": "sb_publishable_9bMuN208fLWpQv0l0jq50w_7NV95sKh",
+  "auth_return_url": "https://staging.getwarden.app/auth"
 }
