@@ -4,10 +4,9 @@
 import { GET_WARDEN_URL } from "../config.ts";
 import { ext } from "../ext.ts";
 import type { View } from "../view.ts";
-import { $, command, followTheme, renderPermissions, show, tone, watchView } from "./common.ts";
+import { $, command, followTheme, show, tone, watchView } from "./common.ts";
 
 followTheme();
-renderPermissions($("perms"));
 $<HTMLAnchorElement>("get-warden").href = GET_WARDEN_URL;
 
 function status(toneName: "mint" | "grey", title: string, text: string): void {
@@ -18,9 +17,6 @@ function status(toneName: "mint" | "grey", title: string, text: string): void {
 
 function render(v: View): void {
   const linked = v.mode === "linked";
-  $("payload").textContent = linked
-    ? '{ "type": "tab", "site": "youtube.com", "idle": false }'
-    : '{ "site": "youtube.com", "seconds": 30 }';
   const needsSignIn = v.mode === "standalone" && !v.signedIn;
   show($("signin-card"), needsSignIn);
   show($("status-card"), !needsSignIn);
