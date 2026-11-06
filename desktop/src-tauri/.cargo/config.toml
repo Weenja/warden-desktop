@@ -1,0 +1,5 @@
+# Intel Macs: the linker ad-hoc signs arm64 binaries by itself but not x86_64 ones. Without a
+# signature on `warden-native-host`, Tauri's ad-hoc signing of the .app fails ("code object is
+# not signed at all"), so ask the linker to sign x86_64 binaries too.
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-Wl,-adhoc_codesign"]

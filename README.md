@@ -23,7 +23,8 @@ What each part sends, field by field: [`DATA.md`](DATA.md) (desktop) and
 Downloads are on the [Releases](https://github.com/GoldenGuts/warden-desktop/releases) page.
 
 ### Mac (macOS 12 or later)
-1. Download `Warden_<version>_universal.dmg`, open it and drag Warden to Applications.
+1. Download `Warden_<version>_aarch64.dmg` (Apple silicon: M1 and later) or `Warden_<version>_x64.dmg`
+   (Intel), open it and drag Warden to Applications.
 2. The app is not signed with an Apple Developer ID yet, so macOS blocks the first open. Either
    right-click Warden in Applications → **Open** → **Open**, or run once in Terminal:
    ```sh
@@ -84,7 +85,8 @@ prod identifier, name and icons, and `build.rs` compiles in the prod backend
 app refuses to start if the two disagree.
 
 Checks: see [`CLAUDE.md`](CLAUDE.md) ("Checks before done"). Releases: pushing a `v*` tag runs
-`.github/workflows/release.yml` (Mac universal app, Windows installer, extension zips).
+`.github/workflows/release.yml` (Mac apps for Apple silicon and Intel, Windows installer, extension
+zips).
 
 ## Layout
 

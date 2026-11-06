@@ -29,9 +29,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # One Mac build per chip: a universal build would merge only the main binary with
+          # lipo, not the native messaging helper (warden-native-host).
           - os: macos-latest
-            args: --target universal-apple-darwin
-            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            args: --target aarch64-apple-darwin
+            rust_targets: aarch64-apple-darwin
+          - os: macos-latest
+            args: --target x86_64-apple-darwin
+            rust_targets: x86_64-apple-darwin
           - os: windows-latest
             args: ""
             rust_targets: ""
