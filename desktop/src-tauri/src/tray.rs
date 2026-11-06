@@ -12,7 +12,10 @@ use crate::ui_windows;
 const ICON: &[u8] = include_bytes!("../icons/tray-template@2x.png");
 /// Windows: the colour mochi, 32 px (the tray draws 16 px at 100 % and 32 px at 200 %).
 /// Windows does not tint tray icons, so a colour mark reads on both light and dark taskbars.
-#[cfg(target_os = "windows")]
+/// Prod has the cream mochi, staging the blue one.
+#[cfg(all(target_os = "windows", warden_prod))]
+const ICON: &[u8] = include_bytes!("../icons-prod/tray-color.png");
+#[cfg(all(target_os = "windows", not(warden_prod)))]
 const ICON: &[u8] = include_bytes!("../icons/tray-color.png");
 
 /// The tray icon's id, to find it again (the popover opens under it).

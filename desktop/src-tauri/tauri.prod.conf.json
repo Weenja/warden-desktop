@@ -1,0 +1,13 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Warden",
+  "identifier": "in.weenja.warden.desktop",
+  "bundle": {
+    "icon": ["icons-prod/32x32.png", "icons-prod/128x128.png", "icons-prod/128x128@2x.png", "icons-prod/icon.icns", "icons-prod/icon.ico"],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons-prod/icon.ico"
+      }
+    }
+  }
+}

@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "zip": "node scripts/build.mjs --zip",
-    "check": "tsc --noEmit && node --test test/*.test.ts && web-ext lint -s dist/firefox",
+    "check": "tsc --noEmit && node --test test/*.test.ts && web-ext lint -s dist/firefox && web-ext lint -s dist/staging-firefox",
     "test": "node --test test/*.test.ts"
   },
   "devDependencies": {

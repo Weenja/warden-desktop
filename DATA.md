@@ -1,6 +1,7 @@
 # What Warden desktop sends, and to whom
 
-The only network peer is the Warden API (Supabase, `config/staging.json` in `desktop/src-tauri/`).
+The only network peer is the Warden API (Supabase: `config/prod.json` in `desktop/src-tauri/` for
+Warden, `config/staging.json` for the Warden β test build).
 Sign-in with Google happens in your own browser, on Google's page (the app only opens it); the app never
 sees your Google password.
 No analytics, no telemetry, no crash reporting.
@@ -31,22 +32,25 @@ access token (valid one hour) is kept in memory only, and a new one is fetched w
 ## On this computer only (never sent to the server)
 - **Browser extension link.** When the Warden extension is installed, your browser starts this same
   app as a "native messaging host" and it relays messages to the running app over a local socket
-  (macOS: a file only your user can open, in `~/Library/Application Support/in.weenja.warden.desktop.staging/`;
+  (macOS: a file only your user can open, in `~/Library/Application Support/in.weenja.warden.desktop/`;
   Windows: a named pipe for your user only, no network clients). The extension sends only the host name of the
   active tab (e.g. `m.youtube.com`, or nothing for non-web pages) and whether you are idle. The app sends
   back your points, whether guarded sites are locked, your guarded sites list, what drains, and this
   computer's name, so the extension can show its badge and blocked page. The app checks that the other end
   is its own host program started by a browser; nothing else can join.
 - **Host manifests.** At each start the app writes small JSON files that tell your browsers where the host
-  program is and which extension may start it: macOS `~/Library/Application Support/<browser>/NativeMessagingHosts/in.weenja.warden.staging.json`
+  program is and which extension may start it: macOS `~/Library/Application Support/<browser>/NativeMessagingHosts/in.weenja.warden.json`
   (only for browsers you have; Firefox and Zen share `Mozilla`); Windows two files in the app data folder plus a per-user registry key per browser
-  (`HKEY_CURRENT_USER\Software\<browser>\NativeMessagingHosts\in.weenja.warden.staging`).
+  (`HKEY_CURRENT_USER\Software\<browser>\NativeMessagingHosts\in.weenja.warden`). The Warden β test build uses
+  the same places with `.staging` names (`in.weenja.warden.desktop.staging`, `in.weenja.warden.staging`).
 - **Which apps are browsers.** So that every browser drains while you have guarded sites, the app checks
   which apps can show web sites: on macOS it reads each app's `Info.plist` (does it open web links and HTML
   files); on Windows it reads the list of installed browsers that Settings > Default apps uses
   (`Clients\StartMenuInternet` in the registry) and the name built into each exe file.
 
-"Get Warden for your phone" opens https://getwarden.app in your browser; the app itself sends nothing there.
+"Get Warden for your phone" opens https://getwarden.app in your browser, and "Get extension" next to a browser
+opens that browser's extension page there (`https://getwarden.app/chrome`, `/edge`, `/firefox`, `/safari`) in that
+browser; the app itself sends nothing there.
 
 Not sent: window titles, screen contents, full URLs or paths, sites you visit that are not guarded, window positions (read locally to put the pill and shield on the right screen), which non-guarded apps you use, your installed
 apps list (the picker reads it locally; only the apps you pick are sent).

@@ -24,12 +24,12 @@ pub fn socket_path() -> Option<std::path::PathBuf> {
     Some(data_dir()?.join(SOCKET_FILE))
 }
 
-/// `\\.\pipe\warden-staging-ext-<domain>-<user>`. Pipe names are machine-wide, so the user's
-/// name keeps two people signed in on one PC apart.
+/// `\\.\pipe\warden-ext-<domain>-<user>` (staging: `warden-staging-ext-...`). Pipe names are
+/// machine-wide, so the user's name keeps two people signed in on one PC apart.
 #[cfg(windows)]
 pub fn pipe_name() -> String {
     let part = |key: &str| std::env::var(key).unwrap_or_default().replace(['\\', '/'], "_");
-    format!(r"\\.\pipe\warden-staging-ext-{}-{}", part("USERDOMAIN"), part("USERNAME"))
+    format!(r"\\.\pipe\{}-{}-{}", super::PIPE_PREFIX, part("USERDOMAIN"), part("USERNAME"))
 }
 
 #[cfg(target_os = "macos")]

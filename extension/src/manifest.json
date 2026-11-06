@@ -1,19 +1,38 @@
 {
   "manifest_version": 3,
-  "name": "Warden β",
-  "short_name": "Warden β",
   "version": "0.1.0",
   "description": "Earn your screen time. Guarded sites drain the points you earn on your phone, and lock at 0.",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyqOxFpnBTE+8rmo1x9JD6jlVgiX/dYlKdS5vx+zZVzcgnI1lrX62wvmroLs8DqLSL59BnvQZfcyyq1X9M2e5nCmJFJJ5VQ2rgpUW00NkM76e2SbmPYfSsE1/ISNRPxwYZJHS/c3msUSeQYNPcOFOhK4JUkFGn7UlaB9WdI/Hgl5k6oa3xrp+1K01Nl//Ab+ssamahLWO/xS6rpR1Gtl8zWl7VudnB1cu5yAe5ye1w25SgA0TqJi/uIvpzSVBaHtWWFtMk1LySc5folQ8zSWwBzfTaNfIJRzwVtbphsT6VH1L1a5DRSAd9SxeodPaP+UMdUeztSxxkaXTwfbXZFazPQIDAQAB",
-  "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "action": {
     "default_title": "Warden",
     "default_popup": "popup.html",
-    "default_icon": { "16": "icons/grey-16.png", "32": "icons/grey-32.png", "48": "icons/grey-48.png" }
+    "default_icon": {
+      "16": "icons/grey-16.png",
+      "32": "icons/grey-32.png",
+      "48": "icons/grey-48.png"
+    }
   },
-  "background": { "service_worker": "background.js" },
-  "permissions": ["tabs", "nativeMessaging", "idle", "alarms", "storage", "declarativeNetRequest", "webRequest", "scripting"],
-  "host_permissions": ["https://kgsrczwqhqcjdbeanlhh.supabase.co/*"],
-  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "tabs",
+    "nativeMessaging",
+    "idle",
+    "alarms",
+    "storage",
+    "declarativeNetRequest",
+    "webRequest",
+    "scripting"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
   "minimum_chrome_version": "120"
 }

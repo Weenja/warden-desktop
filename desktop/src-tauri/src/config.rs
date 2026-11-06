@@ -20,10 +20,21 @@ pub struct Config {
     pub auth_return_url: String,
 }
 
-/// The staging backend. Prod gets its own `config/prod.json` once it is approved.
+/// The prod backend ("Warden", built with `tauri.prod.conf.json`, see build.rs).
+#[cfg(warden_prod)]
+const PROD: &str = include_str!("../config/prod.json");
+/// The staging backend ("Warden β", the default build, and the staging tests).
 const STAGING: &str = include_str!("../config/staging.json");
 
 impl Config {
+    /// The backend this build was made for.
+    pub fn current() -> Config {
+        #[cfg(warden_prod)]
+        return serde_json::from_str(PROD).expect("config/prod.json is valid JSON");
+        #[cfg(not(warden_prod))]
+        return Config::staging();
+    }
+
     pub fn staging() -> Config {
         serde_json::from_str(STAGING).expect("config/staging.json is valid JSON")
     }

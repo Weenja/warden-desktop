@@ -20,16 +20,37 @@ pub mod link;
 pub mod manifest;
 pub mod server;
 
-/// Native messaging host name the extension connects to (staging build).
+// Each flavor pairs with its own extension (see `extension/README.md`): the prod app ("Warden")
+// with the "Warden" extension, the staging app ("Warden β") with "Warden β".
+
+/// Native messaging host name the extension connects to.
+#[cfg(warden_prod)]
+pub const HOST_NAME: &str = "in.weenja.warden";
+#[cfg(not(warden_prod))]
 pub const HOST_NAME: &str = "in.weenja.warden.staging";
-/// The staging Chrome extension's id, fixed by the public key in its manifest (see
-/// `extension/README.md`). Only this extension may start the host in Chromium browsers.
+/// The Chrome extension's id, fixed by the public key in its manifest (`extension/scripts/build.mjs`).
+/// Only this extension may start the host in Chromium browsers.
+#[cfg(warden_prod)]
+pub const CHROME_EXTENSION_ID: &str = "popenmclimjlnklklpmmfhenbcdfmbjb";
+#[cfg(not(warden_prod))]
 pub const CHROME_EXTENSION_ID: &str = "blcmgpbfbbemkkcfjgbhgblnapbndfgp";
-/// The staging Firefox add-on id. Only this add-on may start the host in Firefox.
+/// The Firefox add-on id. Only this add-on may start the host in Firefox.
+#[cfg(warden_prod)]
+pub const FIREFOX_EXTENSION_ID: &str = "extension@getwarden.app";
+#[cfg(not(warden_prod))]
 pub const FIREFOX_EXTENSION_ID: &str = "extension-staging@getwarden.app";
-/// The app's bundle id (macOS) / identifier, as in `tauri.conf.json`. The host starts the app
-/// by it and finds the app's data folder with it (the host runs without Tauri).
+/// The app's bundle id (macOS) / identifier, as in `tauri.conf.json` (staging) and
+/// `tauri.prod.conf.json` (prod). The host starts the app by it and finds the app's data folder
+/// with it (the host runs without Tauri).
+#[cfg(warden_prod)]
+pub const APP_ID: &str = "in.weenja.warden.desktop";
+#[cfg(not(warden_prod))]
 pub const APP_ID: &str = "in.weenja.warden.desktop.staging";
+/// Start of the Windows named pipe between the helper and the app (`endpoint.rs`).
+#[cfg(warden_prod)]
+pub const PIPE_PREFIX: &str = "warden-ext";
+#[cfg(not(warden_prod))]
+pub const PIPE_PREFIX: &str = "warden-staging-ext";
 
 /// The app's exe name, `mainBinaryName` in `tauri.conf.json` (and the Cargo bin name).
 pub const APP_EXE: &str = "warden";

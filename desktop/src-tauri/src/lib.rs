@@ -107,9 +107,17 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            let config = Config::staging();
-            let api = Api::new(&config);
             let identifier = app.config().identifier.clone();
+            // The keychain item, the data folder and the browser link all hang off the identifier,
+            // so a prod backend must never run under the staging identity (or the other way round).
+            // build.rs picks the flavor from the Tauri config; this catches a build that went around it.
+            assert_eq!(
+                identifier,
+                browser_ext::APP_ID,
+                "build mix-up: the Tauri config and the compiled flavor disagree"
+            );
+            let config = Config::current();
+            let api = Api::new(&config);
             let session = Arc::new(session_manager_with(&api, Box::new(KeychainStore::new(&identifier))));
             let platform: Arc<dyn platform::Platform> = Arc::from(platform::current());
             let data_dir = app.path().app_data_dir()?;

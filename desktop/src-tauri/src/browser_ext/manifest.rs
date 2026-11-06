@@ -143,17 +143,18 @@ pub fn register(exe: &Path, data_dir: &Path) -> Vec<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::browser_ext::CHROME_EXTENSION_ID;
 
     #[test]
     fn manifests_allow_only_the_warden_extension() {
         let exe = Path::new("/Applications/Warden β.app/Contents/MacOS/warden-native-host");
         let chrome = chrome_manifest(exe);
-        assert_eq!(chrome["allowed_origins"], json!(["chrome-extension://blcmgpbfbbemkkcfjgbhgblnapbndfgp/"]));
+        assert_eq!(chrome["allowed_origins"], json!([format!("chrome-extension://{CHROME_EXTENSION_ID}/")]));
         assert_eq!(chrome["path"], "/Applications/Warden β.app/Contents/MacOS/warden-native-host");
         assert_eq!(chrome["type"], "stdio");
         assert!(chrome.get("allowed_extensions").is_none());
         let firefox = firefox_manifest(exe);
-        assert_eq!(firefox["allowed_extensions"], json!(["extension-staging@getwarden.app"]));
+        assert_eq!(firefox["allowed_extensions"], json!([FIREFOX_EXTENSION_ID]));
         assert!(firefox.get("allowed_origins").is_none());
     }
 
