@@ -1,14 +1,17 @@
-//! Sign-in: Google through the system browser (OAuth + PKCE), or a 6-digit email code.
+//! Sign-in: Google through the system browser (OpenID Connect ID token), or a 6-digit email code.
 //!
 //! Google flow:
-//! 1. We make a random `verifier` and send only its SHA-256 (`challenge`) in the authorize URL.
-//! 2. The user signs in in their own browser (we never see the password).
-//! 3. Supabase redirects the browser to Warden's web page (`auth_return_url`, e.g.
-//!    `https://getwarden.app/auth?code=...`). That page shows "You're signed in" and opens
-//!    `warden://auth-callback?code=...`; the OS hands that URL to us. (Redirecting straight to
-//!    `warden://` worked too, but left the browser tab dimmed on Google's page forever.)
-//! 4. We trade `code` + `verifier` for a session. A code intercepted by another app is useless
-//!    without the verifier, which never left this process.
+//! 1. We make a random `nonce` and send only its SHA-256 to Google in the sign-in URL.
+//! 2. The user signs in in their own browser (we never see the password). Google's page names
+//!    Warden's own site, because the browser returns there, not to the Supabase project URL.
+//! 3. Google redirects the browser to Warden's web page (`auth_return_url`, e.g.
+//!    `https://getwarden.app/auth#id_token=...`). That page shows "You're signed in" and opens
+//!    `warden://auth-callback#id_token=...`; the OS hands that URL to us. The token travels in
+//!    the URL fragment, which the browser never sends to a server.
+//! 4. We send the ID token and the raw nonce to Supabase (`grant_type=id_token`). Supabase checks
+//!    Google's signature, that the token is for Warden's Google client, and that the SHA-256 of
+//!    the nonce is the one in the token. A token intercepted by another app is useless without
+//!    the nonce, which never left this process. The Android app signs in the same way.
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -19,48 +22,49 @@ use rand::RngCore;
 use sha2::{Digest, Sha256};
 use url::Url;
 
-/// A browser sign-in older than this is abandoned; its verifier is dropped.
+/// A browser sign-in older than this is abandoned; its nonce is dropped.
 const PENDING_TTL: Duration = Duration::from_secs(10 * 60);
 
-pub struct Pkce {
-    pub verifier: String,
-    pub challenge: String,
+/// Google's OpenID Connect sign-in page (`authorization_endpoint` in
+/// https://accounts.google.com/.well-known/openid-configuration).
+const GOOGLE_AUTHORIZE: &str = "https://accounts.google.com/o/oauth2/v2/auth";
+
+pub struct Nonce {
+    /// Stays in this process; goes to Supabase with the ID token.
+    pub raw: String,
+    /// Hex SHA-256 of `raw`; goes to Google, which copies it into the ID token.
+    pub hashed: String,
 }
 
-impl Pkce {
-    pub fn generate() -> Pkce {
-        // 32 random bytes -> 43 base64url chars, inside RFC 7636's 43..128 range.
+impl Nonce {
+    pub fn generate() -> Nonce {
         let mut bytes = [0u8; 32];
         rand::rng().fill_bytes(&mut bytes);
-        Pkce::from_verifier(URL_SAFE_NO_PAD.encode(bytes))
+        Nonce::from_raw(URL_SAFE_NO_PAD.encode(bytes))
     }
 
-    fn from_verifier(verifier: String) -> Pkce {
-        let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
-        Pkce { verifier, challenge }
+    fn from_raw(raw: String) -> Nonce {
+        // Supabase compares the hex SHA-256 of the nonce it gets with the token's `nonce` claim.
+        let hashed = format!("{:x}", Sha256::digest(raw.as_bytes()));
+        Nonce { raw, hashed }
     }
 }
 
-/// `GET /auth/v1/authorize` for a provider, opened in the user's browser.
+/// Google's sign-in page, opened in the user's browser. `response_type=id_token`: Google sends
+/// the ID token straight to `return_url` in the URL fragment; no code, so no client secret.
 ///
-/// `select_account`: add `prompt=select_account`. Supabase passes extra query parameters on to
-/// the provider (what supabase-js `signInWithOAuth({ options: { queryParams } })` does), so
-/// Google shows its account chooser instead of reusing the account the browser is signed in to.
-/// Used by "Use another account" after a sign-in with an account that has no Warden.
-/// `return_url` must be on the Supabase project's redirect allow-list (`uri_allow_list`).
-pub fn authorize_url(
-    supabase_url: &str,
-    return_url: &str,
-    provider: &str,
-    challenge: &str,
-    select_account: bool,
-) -> Url {
-    let mut url = Url::parse(&format!("{supabase_url}/auth/v1/authorize")).expect("valid Supabase URL");
+/// `select_account`: add `prompt=select_account`, so Google shows its account chooser instead of
+/// reusing the account the browser is signed in to. Used by "Use another account" after a
+/// sign-in with an account that has no Warden.
+/// `return_url` must be an authorized redirect URI of the Google client `client_id`.
+pub fn google_authorize_url(client_id: &str, return_url: &str, hashed_nonce: &str, select_account: bool) -> Url {
+    let mut url = Url::parse(GOOGLE_AUTHORIZE).expect("valid Google URL");
     url.query_pairs_mut()
-        .append_pair("provider", provider)
-        .append_pair("redirect_to", return_url)
-        .append_pair("code_challenge", challenge)
-        .append_pair("code_challenge_method", "s256");
+        .append_pair("client_id", client_id)
+        .append_pair("redirect_uri", return_url)
+        .append_pair("response_type", "id_token")
+        .append_pair("scope", "openid email profile")
+        .append_pair("nonce", hashed_nonce);
     if select_account {
         url.query_pairs_mut().append_pair("prompt", "select_account");
     }
@@ -73,11 +77,11 @@ pub enum CallbackError {
     NotOurs,
     #[error("{0}")]
     Denied(String),
-    #[error("the sign-in link has no code")]
-    NoCode,
+    #[error("the sign-in link has no Google token")]
+    NoToken,
 }
 
-/// Pull the one-time code out of `warden://auth-callback?code=...`. Errors from the provider
+/// Pull the Google ID token out of `warden://auth-callback#id_token=...`. Errors from Google
 /// ("access_denied" when the user cancels) arrive in the query or the fragment.
 pub fn parse_callback(raw: &str) -> Result<String, CallbackError> {
     let url = Url::parse(raw).map_err(|_| CallbackError::NotOurs)?;
@@ -94,49 +98,49 @@ pub fn parse_callback(raw: &str) -> Result<String, CallbackError> {
     if let Some(err) = get("error_description").or_else(|| get("error")) {
         return Err(CallbackError::Denied(err));
     }
-    get("code").filter(|c| !c.is_empty()).ok_or(CallbackError::NoCode)
+    get("id_token").filter(|t| !t.is_empty()).ok_or(CallbackError::NoToken)
 }
 
-/// The verifier of the browser sign-in in progress, if any. Starting again replaces it, so
-/// only the latest browser tab can finish.
+/// The nonce of the browser sign-in in progress, if any. Starting again replaces it, so only
+/// the latest browser tab can finish.
 #[derive(Default)]
 pub struct PendingSignIn(Mutex<PendingState>);
 
 #[derive(Default)]
 struct PendingState {
-    verifier: Option<(String, Instant)>,
-    /// The code that used the last verifier. The web page's "Open Warden" button sends the same
+    nonce: Option<(String, Instant)>,
+    /// The token that used the last nonce. The web page's "Open Warden" button sends the same
     /// link again; we recognise it and only bring Warden forward instead of showing an error.
-    used_code: Option<String>,
+    used_token: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Claim {
-    /// A new code: trade it with this verifier.
+    /// A new token: send it to Supabase with this raw nonce.
     Fresh(String),
-    /// The code we already traded (or are trading right now).
+    /// The token we already sent (or are sending right now).
     Repeat,
     /// No sign-in is waiting, or it is older than [`PENDING_TTL`].
     Expired,
 }
 
 impl PendingSignIn {
-    pub fn start(&self) -> Pkce {
-        let pkce = Pkce::generate();
-        self.0.lock().unwrap().verifier = Some((pkce.verifier.clone(), Instant::now()));
-        pkce
+    pub fn start(&self) -> Nonce {
+        let nonce = Nonce::generate();
+        self.0.lock().unwrap().nonce = Some((nonce.raw.clone(), Instant::now()));
+        nonce
     }
 
-    /// Take the verifier once for `code`; a replayed callback never gets it again.
-    pub fn claim(&self, code: &str) -> Claim {
+    /// Take the nonce once for `id_token`; a replayed callback never gets it again.
+    pub fn claim(&self, id_token: &str) -> Claim {
         let mut state = self.0.lock().unwrap();
-        if state.used_code.as_deref() == Some(code) {
+        if state.used_token.as_deref() == Some(id_token) {
             return Claim::Repeat;
         }
-        match state.verifier.take() {
-            Some((verifier, started)) if started.elapsed() < PENDING_TTL => {
-                state.used_code = Some(code.to_string());
-                Claim::Fresh(verifier)
+        match state.nonce.take() {
+            Some((raw, started)) if started.elapsed() < PENDING_TTL => {
+                state.used_token = Some(id_token.to_string());
+                Claim::Fresh(raw)
             }
             _ => Claim::Expired,
         }
@@ -159,48 +163,64 @@ mod tests {
     use super::*;
 
     #[test]
-    fn challenge_matches_rfc7636_example() {
-        let p = Pkce::from_verifier("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".into());
-        assert_eq!(p.challenge, "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
-        assert_eq!(Pkce::generate().verifier.len(), 43);
+    fn nonce_hash_is_hex_sha256() {
+        // echo -n abc | shasum -a 256
+        assert_eq!(
+            Nonce::from_raw("abc".into()).hashed,
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        let n = Nonce::generate();
+        assert_eq!(n.raw.len(), 43);
+        assert_ne!(n.raw, Nonce::generate().raw);
     }
 
     #[test]
-    fn authorize_url_carries_redirect_and_challenge() {
-        let url = authorize_url("https://x.supabase.co", "https://getwarden.app/auth", "google", "abc", false);
+    fn google_url_asks_for_an_id_token_with_the_hashed_nonce() {
+        let url = google_authorize_url("cid.apps.googleusercontent.com", "https://getwarden.app/auth", "abc", false);
         let q: Vec<_> = url.query_pairs().into_owned().collect();
-        assert!(q.contains(&("redirect_to".into(), "https://getwarden.app/auth".into())));
-        assert!(q.contains(&("code_challenge_method".into(), "s256".into())));
+        let has = |k: &str, v: &str| q.contains(&(k.to_string(), v.to_string()));
+        assert_eq!(url.host_str(), Some("accounts.google.com"));
+        assert!(has("client_id", "cid.apps.googleusercontent.com"));
+        assert!(has("redirect_uri", "https://getwarden.app/auth"));
+        assert!(has("response_type", "id_token"));
+        assert!(has("scope", "openid email profile"));
+        assert!(has("nonce", "abc"));
         assert!(!q.iter().any(|(k, _)| k == "prompt"));
-        assert_eq!(url.path(), "/auth/v1/authorize");
-        let chooser = authorize_url("https://x.supabase.co", "https://getwarden.app/auth", "google", "abc", true);
+        let chooser = google_authorize_url("cid", "https://getwarden.app/auth", "abc", true);
         assert!(chooser.query_pairs().any(|(k, v)| k == "prompt" && v == "select_account"));
     }
 
     #[test]
     fn callback_parsing() {
-        assert_eq!(parse_callback("warden://auth-callback?code=abc-123"), Ok("abc-123".into()));
-        assert_eq!(parse_callback("warden://other?code=abc"), Err(CallbackError::NotOurs));
-        assert_eq!(parse_callback("https://auth-callback?code=abc"), Err(CallbackError::NotOurs));
+        assert_eq!(parse_callback("warden://auth-callback#id_token=eyJ.a-b.c_d"), Ok("eyJ.a-b.c_d".into()));
+        assert_eq!(parse_callback("warden://auth-callback?id_token=eyJ.x.y"), Ok("eyJ.x.y".into()));
+        assert_eq!(parse_callback("warden://other#id_token=eyJ"), Err(CallbackError::NotOurs));
+        assert_eq!(parse_callback("https://auth-callback#id_token=eyJ"), Err(CallbackError::NotOurs));
         assert_eq!(
             parse_callback("warden://auth-callback#error=access_denied&error_description=User+cancelled"),
             Err(CallbackError::Denied("User cancelled".into()))
         );
-        assert_eq!(parse_callback("warden://auth-callback?code="), Err(CallbackError::NoCode));
+        assert_eq!(
+            parse_callback("warden://auth-callback?error=access_denied"),
+            Err(CallbackError::Denied("access_denied".into()))
+        );
+        assert_eq!(parse_callback("warden://auth-callback#id_token="), Err(CallbackError::NoToken));
+        // the old Supabase code flow is not accepted any more
+        assert_eq!(parse_callback("warden://auth-callback?code=abc"), Err(CallbackError::NoToken));
     }
 
     #[test]
-    fn pending_verifier_is_single_use() {
+    fn pending_nonce_is_single_use() {
         let pending = PendingSignIn::default();
-        assert_eq!(pending.claim("c1"), Claim::Expired);
-        let pkce = pending.start();
-        assert_eq!(pending.claim("c1"), Claim::Fresh(pkce.verifier));
-        // "Open Warden" on the web page sends the same code again
-        assert_eq!(pending.claim("c1"), Claim::Repeat);
-        // another code never gets the used verifier
-        assert_eq!(pending.claim("c2"), Claim::Expired);
+        assert_eq!(pending.claim("t1"), Claim::Expired);
+        let nonce = pending.start();
+        assert_eq!(pending.claim("t1"), Claim::Fresh(nonce.raw));
+        // "Open Warden" on the web page sends the same token again
+        assert_eq!(pending.claim("t1"), Claim::Repeat);
+        // another token never gets the used nonce
+        assert_eq!(pending.claim("t2"), Claim::Expired);
         let next = pending.start();
-        assert_eq!(pending.claim("c2"), Claim::Fresh(next.verifier));
+        assert_eq!(pending.claim("t2"), Claim::Fresh(next.raw));
     }
 
     #[test]

@@ -235,11 +235,11 @@ impl Api {
 
     // ----- Auth -----
 
-    /// Swap the one-time code from the OAuth redirect for a session. The verifier proves we
-    /// started this sign-in, so a code stolen from the redirect is useless to anyone else.
-    pub async fn exchange_pkce(&self, auth_code: &str, verifier: &str) -> Result<TokenResponse, ApiError> {
-        let body = json!({ "auth_code": auth_code, "code_verifier": verifier });
-        self.auth_post("token?grant_type=pkce", &body).await
+    /// Swap a Google ID token for a session. `nonce` is the raw value whose SHA-256 is in the
+    /// token, so a token stolen from the redirect is useless to anyone else.
+    pub async fn sign_in_with_google(&self, id_token: &str, nonce: &str) -> Result<TokenResponse, ApiError> {
+        let body = json!({ "provider": "google", "id_token": id_token, "nonce": nonce });
+        self.auth_post("token?grant_type=id_token", &body).await
     }
 
     /// Trade the refresh token for a new session. Rotation is on: the old refresh token stops

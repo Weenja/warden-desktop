@@ -2,12 +2,12 @@
 
 Updated 2026-10-18 (browser extension link); 2026-10-17 (builder 1: foundation; builder 2: macOS drain, pill, shield, picker, quit, autostart). Staging build by default: "Warden β", `in.weenja.warden.desktop.staging`.
 
-**Before the first prod build:** follow "Desktop app: Google sign-in on prod" in the private repo `warden/RELEASING.md` (prod Google secret + `https://getwarden.app/auth` on the prod allow-list, `config/prod.json` with `auth_return_url`, one app per `warden://` scheme, click test).
+**Before the first prod build:** follow "Desktop app: Google sign-in on prod" in the private repo `warden/RELEASING.md` (`https://getwarden.app/auth` as a redirect URI of the Google web client, `config/prod.json` with `google_client_id` + `auth_return_url`, one app per `warden://` scheme, click test).
 
 ## Works
 - Tauri v2 tray-only app: no Dock icon (`LSUIElement` + `ActivationPolicy::Accessory`), MOA template icon in the menu bar, popover under the icon (hides on blur), single instance, strict CSP, per-window capabilities (`src-tauri/capabilities/`).
 - UI ported from `mockups/desktop/` with OS light/dark: sign-in (Google + email code; Apple hidden), "This Mac is linked", popover (balance, battery, guarded apps, sites, browsers, crew line, Quit). Alignment fixes are marked `fix:` in `ui/styles/ui.css`.
-- Rust core: `api.rs` (typed requests, 20 s timeout), `auth.rs` (PKCE + `warden://auth-callback` deep link, email OTP), `session.rs` (keychain keeps only the refresh token, user id and email: Windows Credential Manager refuses items over 2560 bytes and a Google user's access token alone is longer, which broke the first Windows sign-in on 2026-10-18; the access token stays in memory and the app refreshes once at start; refresh 2 min before expiry, single-flight, rotation saved before use), `sync.rs` (register_device, heartbeat every 60 s and on wake/unlock, block list, crew, balance-token decode, `spend_tick`, `set_guarded_apps`).
+- Rust core: `api.rs` (typed requests, 20 s timeout), `auth.rs` (Google ID token + nonce through `warden://auth-callback`, email OTP), `session.rs` (keychain keeps only the refresh token, user id and email: Windows Credential Manager refuses items over 2560 bytes and a Google user's access token alone is longer, which broke the first Windows sign-in on 2026-10-18; the access token stays in memory and the app refreshes once at start; refresh 2 min before expiry, single-flight, rotation saved before use), `sync.rs` (register_device, heartbeat every 60 s and on wake/unlock, block list, crew, balance-token decode, `spend_tick`, `set_guarded_apps`).
 - `platform/macos.rs`: frontmost app, polite terminate, installed apps with 64 px PNG icons, screen locked, computer name. `platform/windows.rs`: see the Windows section.
 - Quit sends a last heartbeat with `stopped_at` (5 s cap), then exits.
 
@@ -35,8 +35,8 @@ npm run tauri dev                       # tray icon + sign-in window (dev server
 npm run tauri build -- --debug --bundles app
 open "src-tauri/target/debug/bundle/macos/Warden β.app"
 ```
-Sign-in with Google needs the bundled app: macOS only routes `warden://` links to an installed .app bundle, not to `tauri dev`. Open the .app once (LaunchServices registers the scheme), click Continue with Google, finish in the browser. Since 2026-10-18 Supabase returns the browser to `https://staging.getwarden.app/auth` (config `auth_return_url`, on the staging redirect allow-list); that page opens `warden://auth-callback` and shows "You're signed in" (before, the tab stayed dimmed on Google's page). Allow "Open Warden β" once (tick "Always allow").
-- 2026-10-18: Google sign-in had failed with "Unable to exchange external code" because the staging project held a wrong Google client secret (log: `invalid_client`); fixed in the staging auth config.
+Sign-in with Google needs the bundled app: macOS only routes `warden://` links to an installed .app bundle, not to `tauri dev`. Open the .app once (LaunchServices registers the scheme), click Continue with Google, finish in the browser. Allow "Open Warden β" once (tick "Always allow").
+- Since 2026-10-18 (branch google-id-token) the app opens Google's own sign-in page (`response_type=id_token`, config `google_client_id`), not Supabase's `/authorize`. Google returns the browser to `https://staging.getwarden.app/auth` (config `auth_return_url`, an authorized redirect URI of the Google web client); that page opens `warden://auth-callback#id_token=…` and shows "You're signed in". The app sends the token + raw nonce to Supabase (`grant_type=id_token`), like Android. Why: with the Supabase redirect, Google's page said "continue to kgsrczwqhqcjdbeanlhh.supabase.co"; now it names Warden's site. No Google client secret is used. Click test passed 2026-10-18 on this Mac (Jojo): Google's chooser said "to continue to getwarden.app", the tab said "You're signed in", the app linked.
 Email codes need custom SMTP on Supabase first (staging has none, so codes only reach team addresses).
 
 ## Checks

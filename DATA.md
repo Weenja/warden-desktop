@@ -1,7 +1,8 @@
 # What Warden desktop sends, and to whom
 
 The only network peer is the Warden API (Supabase, `config/staging.json` in `desktop/src-tauri/`).
-Sign-in with Google happens in your own browser; the app never sees your Google password.
+Sign-in with Google happens in your own browser, on Google's page (the app only opens it); the app never
+sees your Google password.
 No analytics, no telemetry, no crash reporting.
 
 Every request carries the public `apikey` (the publishable key) and, once signed in, your
@@ -10,11 +11,11 @@ access token (valid one hour) is kept in memory only, and a new one is fetched w
 
 | When | Endpoint | Fields sent |
 |---|---|---|
-| Google sign-in (browser) | `GET /auth/v1/authorize` | `provider=google`, `redirect_to=https://getwarden.app/auth` (staging: `staging.getwarden.app/auth`; that page opens `warden://auth-callback`), `code_challenge` (SHA-256 of a random secret), `code_challenge_method=s256` |
-| Google sign-in returns | `POST /auth/v1/token?grant_type=pkce` | `auth_code` (from the redirect), `code_verifier` (the random secret) |
+| Google sign-in (browser, on Google's page, not the Warden API) | `GET https://accounts.google.com/o/oauth2/v2/auth` | `client_id` (Warden's public Google client), `redirect_uri=https://getwarden.app/auth` (staging: `staging.getwarden.app/auth`; that page opens `warden://auth-callback` with the ID token from the URL fragment), `response_type=id_token`, `scope=openid email profile`, `nonce` (SHA-256 of a random secret) |
+| Google sign-in returns | `POST /auth/v1/token?grant_type=id_token` | `provider=google`, `id_token` (from Google: your Google account id, email and name, signed by Google), `nonce` (the random secret) |
 | Google sign-in, only if the account is under 10 minutes old and its only identity is the Google one, made with the account (`user.created_at`, `user.identities` from the sign-in) | `GET /rest/v1/devices?select=id,platform&limit=1` | nothing (reads whether the account has any device; you only see your own) |
 | Google sign-in, only if that account is under 10 minutes old, has no device, and has exactly one identity (Google, made within 5 s of the account): the empty account Google sign-in just made (accounts are made on the phone) | `POST /functions/v1/delete-account` | nothing (deletes the signed-in account itself; never called for an account that has a device, is older than 10 minutes, or linked Google after it was made) |
-| "Use another account" (after "No Warden account") | `GET /auth/v1/authorize` | same as Google sign-in, plus `prompt=select_account` (passed on to Google so it shows its account chooser) |
+| "Use another account" (after "No Warden account") | Google's page, as above | same as Google sign-in, plus `prompt=select_account` (Google shows its account chooser) |
 | Email sign-in | `POST /auth/v1/otp` | `email`, `create_user: false` |
 | Email code | `POST /auth/v1/verify` | `type: "email"`, `email`, `token` (the 6-digit code) |
 | Token refresh (before expiry) | `POST /auth/v1/token?grant_type=refresh_token` | `refresh_token` |

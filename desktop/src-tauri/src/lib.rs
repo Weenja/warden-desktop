@@ -37,7 +37,8 @@ pub struct AppState {
     /// Linked browser extensions (native messaging, see `browser_ext`).
     pub links: Arc<Links>,
     pub pending: PendingSignIn,
-    /// Where the browser lands after Google sign-in (see `auth.rs`).
+    /// Warden's Google client and the page the browser lands on after Google sign-in (see `auth.rs`).
+    pub google_client_id: String,
     pub auth_return_url: String,
 }
 
@@ -121,6 +122,7 @@ pub fn run() {
                 guard,
                 links: links.clone(),
                 pending: PendingSignIn::default(),
+                google_client_id: config.google_client_id.clone(),
                 auth_return_url: config.auth_return_url.clone(),
             });
             register_native_host(&data_dir);

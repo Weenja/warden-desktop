@@ -1,5 +1,6 @@
 {
   "supabase_url": "https://kgsrczwqhqcjdbeanlhh.supabase.co",
   "publishable_key": "sb_publishable_9bMuN208fLWpQv0l0jq50w_7NV95sKh",
+  "google_client_id": "243483196176-qda4ss464c53d9nhmdf1ctcc7vete32j.apps.googleusercontent.com",
   "auth_return_url": "https://staging.getwarden.app/auth"
 }

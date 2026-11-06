@@ -53,12 +53,11 @@ async fn ui_state(state: &AppState) -> UiState {
 /// `select_account`: make Google show its account chooser ("Use another account").
 #[tauri::command]
 pub fn sign_in_google(app: AppHandle, state: State<'_, AppState>, select_account: Option<bool>) -> Result<(), String> {
-    let pkce = state.pending.start();
-    let url = auth::authorize_url(
-        state.api.base_url(),
+    let nonce = state.pending.start();
+    let url = auth::google_authorize_url(
+        &state.google_client_id,
         &state.auth_return_url,
-        "google",
-        &pkce.challenge,
+        &nonce.hashed,
         select_account.unwrap_or(false),
     );
     app.opener().open_url(url.as_str(), None::<&str>).map_err(|_| "Could not open your browser.".to_string())
@@ -302,8 +301,8 @@ pub async fn handle_auth_callback(app: &AppHandle, state: &AppState, url: &str) 
     let outcome = match auth::parse_callback(url) {
         Err(auth::CallbackError::NotOurs) => return,
         Err(e) => GoogleOutcome::Failed(e.to_string()),
-        Ok(code) => match state.pending.claim(&code) {
-            Claim::Fresh(verifier) => match state.api.exchange_pkce(&code, &verifier).await {
+        Ok(id_token) => match state.pending.claim(&id_token) {
+            Claim::Fresh(nonce) => match state.api.sign_in_with_google(&id_token, &nonce).await {
                 Ok(tokens) => finish_google_sign_in(app, state, tokens).await,
                 Err(e) => GoogleOutcome::Failed(friendly_auth_error(&e)),
             },
