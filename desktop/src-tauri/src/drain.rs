@@ -1,5 +1,5 @@
-//! The drain rules, free of the OS and the network so they can be tested. Mirrors Android's
-//! `GuardCore` (warden-prd `apps/android/platform/.../GuardCore.kt`).
+//! The drain rules, free of the OS and the network so they can be tested. Mirrors the
+//! Android app's drain rules (`GuardCore`).
 //!
 //! - A guarded app in front drains.
 //! - A known browser in front WITH the Warden extension linked drains only while its active tab
