@@ -12,7 +12,7 @@ The private key that matches the id is kept outside the repo at `~/.config/warde
 (only needed to pack a `.crx`; loading unpacked uses the public key in the manifest). The Chrome
 Web Store refuses a `key` in uploads, so a store build must drop it (the store keeps the id).
 
-What it does: see `EXTENSION-BRIEF.md` at the repo root. What it sends: [`DATA.md`](DATA.md).
+What it sends: [`DATA.md`](DATA.md).
 - **Linked** (Warden desktop app on this computer): reports the front tab's site to the app over
   native messaging and shows the app's state; no network calls of its own.
 - **Standalone** (no app: Firefox on Android, or a computer without the app): signs in and talks

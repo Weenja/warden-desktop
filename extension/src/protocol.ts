@@ -1,6 +1,6 @@
 // Messages between this extension and the Warden desktop app (native messaging, JSON).
 // The browser frames each message with a 4-byte length; we only see the objects.
-// The full protocol is in EXTENSION-BRIEF.md ("Native messaging protocol").
+// The protocol (and who checks what) is described in extension/README.md, "Native messaging".
 
 export type ToApp =
   | { type: "hello"; ext_version: string }
