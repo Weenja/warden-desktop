@@ -1,0 +1,83 @@
+# Pushing a tag like v0.1.0 builds the prod "Warden" apps and extension and attaches them to a
+# GitHub prerelease for that tag. No signing secrets: the Mac app is ad-hoc signed, the Windows
+# installer is unsigned (see README.md, Install).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the release and upload its files
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      # Keep a release that already exists (for example one made by hand with its notes).
+      - name: Create the prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 ||
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease --title "Warden $TAG" --generate-notes
+
+  desktop:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: --target universal-apple-darwin
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - os: windows-latest
+            args: ""
+            rust_targets: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - run: npm ci
+        working-directory: desktop
+      # tauri.prod.conf.json makes the "Warden" build (identifier, name, icons) and build.rs then
+      # compiles in the prod backend (src-tauri/config/prod.json).
+      - uses: tauri-apps/tauri-action@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          projectPath: desktop
+          args: --config src-tauri/tauri.prod.conf.json ${{ matrix.args }}
+          tagName: ${{ github.ref_name }}
+          releaseDraft: false
+          prerelease: true
+
+  extension:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - name: Build and check
+        working-directory: extension
+        run: |
+          npm ci
+          npm run build
+          npm run check
+      # Only the prod zips go to the release; the staging ("Warden β") zips are for testers.
+      - name: Upload the extension zips
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" extension/dist/warden-chrome-*.zip extension/dist/warden-firefox-*.zip --repo "$GITHUB_REPOSITORY" --clobber
