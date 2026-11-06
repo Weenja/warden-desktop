@@ -34,6 +34,8 @@ export type View = {
   guardedSite: string | null;
   draining: boolean;
   guardedSites: string[];
+  /** The front tab is a guarded site or the blocked page: the popup may close it. */
+  closable: boolean;
   /** Standalone: the in-page points chip is on. */
   chip: boolean;
   signin: SigninView;
@@ -55,6 +57,7 @@ export const EMPTY_VIEW: View = {
   guardedSite: null,
   draining: false,
   guardedSites: [],
+  closable: false,
   chip: false,
   signin: NO_SIGNIN,
 };
@@ -71,7 +74,7 @@ export type Command =
   | { cmd: "email_verify"; code: string }
   | { cmd: "signin_reset" }
   | { cmd: "sign_out" }
-  /** Close the front tab (popup "Stop · close tab" / "Close tab"). */
+  /** Close the front tab, only if it is a guarded site or the blocked page (popup "Stop · close tab" / "Close tab"). */
   | { cmd: "stop" }
   /** Close the tab that sent this (blocked page). */
   | { cmd: "close_me" }

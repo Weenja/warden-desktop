@@ -52,6 +52,18 @@ function renderDrainRow(v: View): void {
   }
 }
 
+function renderSites(v: View): void {
+  show($("sites"), v.guardedSites.length > 0);
+  $("sites-list").replaceChildren(
+    ...v.guardedSites.map((site) => {
+      const li = document.createElement("li");
+      li.textContent = site;
+      if (site === v.guardedSite) li.classList.add("is-here");
+      return li;
+    }),
+  );
+}
+
 function renderSignedIn(v: View): void {
   const main = $("main");
   const draining = !v.locked && v.guardedSite !== null && v.draining;
@@ -63,7 +75,8 @@ function renderSignedIn(v: View): void {
   show($("balance"), true);
   show($("drain"), true);
   show($("stop"), draining);
-  show($("close-tab"), v.locked);
+  show($("close-tab"), v.locked && v.closable);
+  renderSites(v);
   show($("note"), !draining && !v.locked && !v.guardedSite);
   show($("chip-setting"), v.mode === "standalone" && v.guardedSites.length > 0);
   $("chip-switch").setAttribute("aria-checked", String(v.chip));
@@ -128,7 +141,7 @@ function renderFacts(v: View): void {
 
 function render(v: View): void {
   current = v;
-  for (const id of ["balance", "drain", "stop", "close-tab", "note", "msg", "open-app", "signin", "chip-setting"]) {
+  for (const id of ["balance", "drain", "stop", "close-tab", "note", "msg", "open-app", "signin", "chip-setting", "sites"]) {
     show($(id), false);
   }
   if (v.mode === "checking") {

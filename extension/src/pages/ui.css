@@ -128,3 +128,9 @@ img{display:block}
 .status span{display:block;font-weight:600;font-size:14px;color:var(--ink2)}
 .signin{display:flex;flex-direction:column;gap:10px}
 .btn--google,.btn--apple{background:var(--s2);color:var(--ink)}
+
+/* Guarded sites list (popup) */
+.sites h4{margin:0 0 8px;font:800 13px/1 var(--f);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.sites ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.sites li{padding:5px 10px;border-radius:12px;background:var(--surface);border:1.5px solid var(--line, transparent);font-weight:700;font-size:13px;color:var(--ink)}
+.sites li.is-here{border-color:var(--tone-f);color:var(--tone)}

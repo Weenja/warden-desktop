@@ -13,7 +13,7 @@ import type { AppState } from "../protocol.ts";
 import { guardedSiteFor, siteOf } from "../site.ts";
 import { EMPTY_VIEW, type Command, type Mode, type View } from "../view.ts";
 import { paintBadge } from "./badge.ts";
-import { blockOpenTabs, blockTabIfGuarded, setBlockRule } from "./blocker.ts";
+import { blockOpenTabs, blockTabIfGuarded, isBlockedPage, setBlockRule } from "./blocker.ts";
 import { publishChip, syncChipScript } from "./chip.ts";
 import { IDLE_AFTER_SECS, readFront, type Front } from "./front.ts";
 import * as linked from "./linked.ts";
@@ -99,6 +99,7 @@ async function buildView(front: Front): Promise<View> {
   const chipOn = (await ext.storage.local.get("chipOn")).chipOn === true;
   const view: View = { ...EMPTY_VIEW, ...part, mode, site: front.site, chip: chipOn, signin: await signin.readSignin() };
   view.guardedSite = guardedSiteFor(front.site, view.guardedSites);
+  view.closable = view.guardedSite !== null || isBlockedPage(front.url);
   return view;
 }
 
@@ -215,8 +216,12 @@ async function handle(command: Command, sender: chrome.runtime.MessageSender): P
       await serial(standalone.signOut);
       return signin.resetSignin();
     case "stop": {
+      // Never close a tab that is not guarded: the popup button must not act as a general "close tab".
       const front = await readFront();
-      if (front.tabId !== null) await ext.tabs.remove(front.tabId);
+      const { view } = await ext.storage.session.get("view");
+      const guarded = (view as View | undefined)?.guardedSites ?? [];
+      const closable = guardedSiteFor(front.site, guarded) !== null || isBlockedPage(front.url);
+      if (front.tabId !== null && closable) await ext.tabs.remove(front.tabId);
       return;
     }
     case "close_me":

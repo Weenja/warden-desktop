@@ -11,6 +11,7 @@ export const IDLE_AFTER_SECS = 5 * 60;
 export type Front = {
   site: string | null;
   tabId: number | null;
+  url: string | null;
   /** A browser window has focus. Firefox on Android has no windows API: always true there. */
   focused: boolean;
   /** Screen locked, or no input for 5 min and the tab is not playing audio. */
@@ -25,6 +26,7 @@ export async function readFront(): Promise<Front> {
   return {
     site: siteOf(tab?.url),
     tabId: tab?.id ?? null,
+    url: tab?.url ?? null,
     focused: win ? win.focused : true,
     idle: state === "locked" || (state === "idle" && !tab?.audible),
   };

@@ -13,6 +13,8 @@ const RULE_ID = 1;
 
 export const blockedPageUrl = (site: string) => ext.runtime.getURL(`blocked.html?site=${encodeURIComponent(site)}`);
 
+export const isBlockedPage = (url: string | null) => url !== null && url.startsWith(ext.runtime.getURL("blocked.html"));
+
 /** `sites` empty = nothing blocked. Idempotent: the rule is replaced each time. */
 export async function setBlockRule(sites: readonly string[]): Promise<void> {
   const addRules: chrome.declarativeNetRequest.Rule[] = sites.length
