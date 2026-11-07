@@ -30,12 +30,10 @@ Downloads are on the [Releases](https://github.com/Weenja/warden-desktop/release
 ### macOS 12 or later
 
 1. Download `Warden_<version>_aarch64.dmg` (Apple silicon) or `Warden_<version>_x64.dmg` (Intel),
-   open it and drag Warden to Applications.
-2. This release is not yet notarised by Apple, so macOS blocks the first launch. Right-click
-   Warden in Applications and choose **Open**, then **Open** again. On recent macOS versions,
-   open System Settings → Privacy & Security and choose **Open Anyway** instead. Compare the
-   file's SHA-256 with `SHA256SUMS.txt` on the release page if you want to verify the download.
-3. Warden appears in the menu bar; there is no Dock icon. Choose **Continue with Google** and
+   open it and drag Warden to Applications. The app is signed with a Developer ID and notarised
+   by Apple, so it opens without a Gatekeeper warning. Compare the file's SHA-256 with
+   `SHA256SUMS.txt` on the release page if you want to verify the download.
+2. Warden appears in the menu bar; there is no Dock icon. Choose **Continue with Google** and
    complete the sign-in in your browser.
 
 ### Windows 10 and 11
@@ -66,7 +64,7 @@ until Firefox quits. See [`extension/README.md`](extension/README.md) for Firefo
 ## Current limitations
 
 - Sign-in is with Google only, and the account must already exist in the phone app.
-- The macOS app is not yet notarised and the Windows installer is not yet code-signed.
+- The Windows installer is not yet code-signed.
 - The browser extension is not yet available from the Chrome Web Store or addons.mozilla.org.
 
 ## Build from source

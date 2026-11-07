@@ -1,6 +1,9 @@
 # Pushing a tag like v0.1.0 builds the prod "Warden" apps and extension and attaches them to a
-# GitHub prerelease for that tag. No signing secrets: the Mac app is ad-hoc signed, the Windows
-# installer is unsigned (see README.md, Install).
+# GitHub prerelease for that tag. The Mac apps are signed with the Developer ID Application
+# certificate, built with the hardened runtime, notarised and stapled by Tauri. Repository secrets:
+# APPLE_CERTIFICATE (base64 .p12), APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+# APPLE_API_ISSUER, APPLE_API_KEY (key id) and APPLE_API_KEY_CONTENT (the .p8 App Store Connect
+# key). The Windows installer is unsigned (see README.md, Install).
 name: Release
 
 on:
@@ -53,11 +56,30 @@ jobs:
           targets: ${{ matrix.rust_targets }}
       - run: npm ci
         working-directory: desktop
+      # Notarisation reads the App Store Connect key from a file.
+      - name: Write the App Store Connect key
+        id: apikey
+        if: runner.os == 'macOS'
+        env:
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
+        run: |
+          key_path="$RUNNER_TEMP/AuthKey_appstoreconnect.p8"
+          printf '%s\n' "$APPLE_API_KEY_CONTENT" > "$key_path"
+          chmod 600 "$key_path"
+          echo "path=$key_path" >> "$GITHUB_OUTPUT"
       # tauri.prod.conf.json makes the "Warden" build (identifier, name, icons) and build.rs then
-      # compiles in the prod backend (src-tauri/config/prod.json).
+      # compiles in the prod backend (src-tauri/config/prod.json). On macOS Tauri imports the
+      # certificate into a temporary keychain, signs, notarises and staples; the Apple variables
+      # are empty on Windows.
       - uses: tauri-apps/tauri-action@v1.0.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          APPLE_CERTIFICATE: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          APPLE_API_ISSUER: ${{ runner.os == 'macOS' && secrets.APPLE_API_ISSUER || '' }}
+          APPLE_API_KEY: ${{ runner.os == 'macOS' && secrets.APPLE_API_KEY || '' }}
+          APPLE_API_KEY_PATH: ${{ steps.apikey.outputs.path }}
         with:
           projectPath: desktop
           args: --config src-tauri/tauri.prod.conf.json ${{ matrix.args }}
