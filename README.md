@@ -84,7 +84,8 @@ prod identifier, name and icons, and `build.rs` compiles in the prod backend
 (`src-tauri/config/prod.json`), extension ids and native messaging host name when it sees it. The
 app refuses to start if the two disagree.
 
-Checks: see [`CLAUDE.md`](CLAUDE.md) ("Checks before done"). Releases: pushing a `v*` tag runs
+Checks before a PR: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`,
+`npx tsc --noEmit`; for Windows code at least `cargo check --target x86_64-pc-windows-msvc`. Releases: pushing a `v*` tag runs
 `.github/workflows/release.yml` (Mac apps for Apple silicon and Intel, Windows installer, extension
 zips).
 
