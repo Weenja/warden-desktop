@@ -1,7 +1,7 @@
 # What Warden desktop sends, and to whom
 
 The only network peer is the Warden API (Supabase: `config/prod.json` in `desktop/src-tauri/` for
-Warden, `config/staging.json` for the Warden β test build).
+Warden, `config/staging.json` for the internal test build).
 Sign-in with Google happens in your own browser, on Google's page (the app only opens it); the app never
 sees your Google password.
 No analytics, no telemetry, no crash reporting.
@@ -41,7 +41,7 @@ access token (valid one hour) is kept in memory only, and a new one is fetched w
 - **Host manifests.** At each start the app writes small JSON files that tell your browsers where the host
   program is and which extension may start it: macOS `~/Library/Application Support/<browser>/NativeMessagingHosts/in.weenja.warden.json`
   (only for browsers you have; Firefox and Zen share `Mozilla`); Windows two files in the app data folder plus a per-user registry key per browser
-  (`HKEY_CURRENT_USER\Software\<browser>\NativeMessagingHosts\in.weenja.warden`). The Warden β test build uses
+  (`HKEY_CURRENT_USER\Software\<browser>\NativeMessagingHosts\in.weenja.warden`). The internal test build uses
   the same places with `.staging` names (`in.weenja.warden.desktop.staging`, `in.weenja.warden.staging`).
 - **Which apps are browsers.** So that every browser drains while you have guarded sites, the app checks
   which apps can show web sites: on macOS it reads each app's `Info.plist` (does it open web links and HTML

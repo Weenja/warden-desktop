@@ -1,106 +1,113 @@
-# Warden for Mac, Windows and your browser
+# Warden for Mac, Windows and the browser
 
-Warden makes you earn your screen time. You earn points on your phone (1 point = 1 minute); the
-apps and sites you guard drain them while they are in front, and lock at 0.
+Warden turns screen time into something you earn. Points are earned on your phone (1 point = 1
+minute). The apps and sites you guard spend them while they are in front, and lock when the balance
+reaches zero.
 
-This repo holds the two computer parts, open source so you can check what they do:
+This repository contains the two desktop components of Warden. They are open source so that anyone
+can verify what runs on their computer.
 
-- **Desktop app** (`desktop/`, Tauri v2, macOS and Windows): lives in the menu bar / tray, drains
-  points while a guarded app is in front, shows a small pill while it drains and a shield at 0.
-- **Browser extension** (`extension/`, Chrome and Firefox): tells the desktop app which site is in
-  front, so only guarded sites drain instead of the whole browser, and blocks them at 0. Without the
-  desktop app (for example Firefox on Android) it works on its own.
+- **Desktop app** (`desktop/`): a menu bar / system tray app for macOS and Windows. It spends points
+  while a guarded app is in front, shows a small status pill while it does, and shows a shield when
+  the balance is zero.
+- **Browser extension** (`extension/`): for Chrome, Edge, Brave, Arc, Vivaldi and Firefox. It tells
+  the desktop app which site is in front, so only guarded sites spend points instead of the whole
+  browser, and blocks them at zero. On a device without the desktop app (for example Firefox for
+  Android) it works on its own.
 
-Both need the **Warden phone app**: your account, your crew and your points live there. Sign in to
-the phone app first, then sign in here with the same Google account. Get it at
+Both require the **Warden phone app**, where your account, crew and points live. Sign in on the
+phone first, then sign in on the desktop with the same Google account. Get the phone app at
 [getwarden.app](https://getwarden.app).
 
-What each part sends, field by field: [`DATA.md`](DATA.md) (desktop) and
-[`extension/DATA.md`](extension/DATA.md). No analytics, no telemetry, no crash reporting.
+**Privacy.** Every request each component makes is documented field by field in [`DATA.md`](DATA.md)
+(desktop app) and [`extension/DATA.md`](extension/DATA.md). There is no analytics, telemetry or
+crash reporting.
 
 ## Install
 
-Downloads are on the [Releases](https://github.com/GoldenGuts/warden-desktop/releases) page.
+Downloads are on the [Releases](https://github.com/Weenja/warden-desktop/releases) page.
 
-### Mac (macOS 12 or later)
-1. Download `Warden_<version>_aarch64.dmg` (Apple silicon: M1 and later) or `Warden_<version>_x64.dmg`
-   (Intel), open it and drag Warden to Applications.
-2. The app is not signed with an Apple Developer ID yet, so macOS blocks the first open. Either
-   right-click Warden in Applications → **Open** → **Open**, or run once in Terminal:
-   ```sh
-   xattr -d com.apple.quarantine /Applications/Warden.app
-   ```
-   (On recent macOS, if there is no Open button: System Settings → Privacy & Security → **Open
-   Anyway**.)
-3. Warden shows a mochi in the menu bar (no Dock icon). Click **Continue with Google** and finish in
-   your browser.
+### macOS 12 or later
+
+1. Download `Warden_<version>_aarch64.dmg` (Apple silicon) or `Warden_<version>_x64.dmg` (Intel),
+   open it and drag Warden to Applications.
+2. This release is not yet notarised by Apple, so macOS blocks the first launch. Right-click
+   Warden in Applications and choose **Open**, then **Open** again. On recent macOS versions,
+   open System Settings → Privacy & Security and choose **Open Anyway** instead. Compare the
+   file's SHA-256 with `SHA256SUMS.txt` on the release page if you want to verify the download.
+3. Warden appears in the menu bar; there is no Dock icon. Choose **Continue with Google** and
+   complete the sign-in in your browser.
 
 ### Windows 10 and 11
-1. Download `Warden_<version>_x64-setup.exe` and run it. It installs for your user only (no admin).
-2. The installer is not code-signed yet, so Windows SmartScreen may say "Windows protected your
-   PC". Click **More info** → **Run anyway**.
-3. Warden shows in the tray. Click **Continue with Google** and finish in your browser.
+
+1. Download `Warden_<version>_x64-setup.exe` and run it. It installs for the current user and does
+   not need administrator rights.
+2. The installer does not yet carry a code-signing certificate, so Windows SmartScreen may show a
+   warning. Choose **More info**, then **Run anyway**. Compare the file's SHA-256 with
+   `SHA256SUMS.txt` on the release page if you want to verify the download.
+3. Warden appears in the system tray. Choose **Continue with Google** and complete the sign-in in
+   your browser.
 
 ### Chrome, Edge, Brave, Arc, Vivaldi
-The extension is not in the Chrome Web Store yet, so it is loaded by hand:
-1. Download `warden-chrome-<version>.zip` and unzip it into a folder you keep.
-2. Open `chrome://extensions` (Edge: `edge://extensions`), turn on **Developer mode**.
-3. **Load unpacked** and pick that folder. Pin the Warden icon.
+
+Until the extension is listed in the Chrome Web Store, it is installed from the release zip:
+
+1. Download `warden-chrome-<version>.zip` and unzip it into a folder you will keep.
+2. Open `chrome://extensions` (Edge: `edge://extensions`) and enable **Developer mode**.
+3. Choose **Load unpacked** and select that folder. Pin the Warden icon to the toolbar.
 
 ### Firefox
-Firefox installs only add-ons signed by Mozilla for good, and Warden is not on
-addons.mozilla.org yet. To try it: open `about:debugging#/runtime/this-firefox` →
-**Load Temporary Add-on…** → pick `warden-firefox-<version>.zip`. It stays until Firefox quits.
-More (Firefox for Android, signed builds): [`extension/README.md`](extension/README.md).
 
-## Known limits
-- Sign-in is Google only, and the Warden account must already exist (it is made in the phone app).
-  A Google account with no Warden account gets "No Warden account for …".
-- The Mac app is unsigned and not notarised; the Windows installer is unsigned (see above).
-- One Warden app per computer: the prod app ("Warden") and the test build ("Warden β") both open
-  `warden://` sign-in links, so keep only one installed.
+Firefox permanently installs only add-ons signed by Mozilla. Until Warden is listed on
+addons.mozilla.org, load it as a temporary add-on: open `about:debugging#/runtime/this-firefox`,
+choose **Load Temporary Add-on…** and select `warden-firefox-<version>.zip`. It stays installed
+until Firefox quits. See [`extension/README.md`](extension/README.md) for Firefox for Android.
+
+## Current limitations
+
+- Sign-in is with Google only, and the account must already exist in the phone app.
+- The macOS app is not yet notarised and the Windows installer is not yet code-signed.
+- The browser extension is not yet available from the Chrome Web Store or addons.mozilla.org.
 
 ## Build from source
 
-Needs Rust (stable) and Node 22.18+.
+Requirements: Rust (stable) and Node.js 22.18 or later.
 
 ```sh
-# Desktop app. Default: the "Warden β" staging build (test backend).
+# Desktop app
 cd desktop
 npm ci
-npm run tauri dev                      # run it (sign-in needs a bundled app, see desktop/STATUS.md)
-npm run tauri build                    # Warden β
-npm run build:prod                     # Warden (prod backend, identifier, name and icons)
+npm run tauri dev          # development build against the test backend
+npm run build:prod         # production build: Warden
 
-# Browser extension: prod and staging, Chrome and Firefox, folders and zips in extension/dist/
+# Browser extension (Chrome and Firefox builds and zips in extension/dist/)
 cd extension
 npm ci
 npm run build
 npm run check
 ```
 
-`npm run build:prod` passes `--config src-tauri/tauri.prod.conf.json` to Tauri. That file sets the
-prod identifier, name and icons, and `build.rs` compiles in the prod backend
-(`src-tauri/config/prod.json`), extension ids and native messaging host name when it sees it. The
-app refuses to start if the two disagree.
+`npm run build:prod` passes `src-tauri/tauri.prod.conf.json` to Tauri. That file sets the
+production identifier, name and icons, and `build.rs` compiles in the production backend
+configuration from `src-tauri/config/prod.json`. The app refuses to start if the two disagree.
 
-Checks before a PR: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`,
-`npx tsc --noEmit`; for Windows code at least `cargo check --target x86_64-pc-windows-msvc`. Releases: pushing a `v*` tag runs
-`.github/workflows/release.yml` (Mac apps for Apple silicon and Intel, Windows installer, extension
-zips).
+Checks before a pull request: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`,
+`cargo test` and `npx tsc --noEmit`; for Windows code at least
+`cargo check --target x86_64-pc-windows-msvc`. Pushing a `v*` tag runs
+`.github/workflows/release.yml`, which builds the macOS apps (Apple silicon and Intel), the Windows
+installer and the extension zips, and attaches them to a GitHub release.
 
-## Layout
+## Repository layout
 
-| Path | What |
+| Path | Contents |
 |---|---|
-| `desktop/src-tauri/` | Rust core: sign-in, sync, drain rules, OS watchers, browser link |
-| `desktop/ui/` | The app's windows (HTML/CSS/TypeScript) |
-| `desktop/STATUS.md` | What works, what was tested how, what is open |
-| `extension/` | The browser extension (MV3, TypeScript) |
-| `mockups/` | The approved designs the UI is built from |
-| `DATA.md` | Everything the desktop app sends |
+| `desktop/src-tauri/` | Rust core: sign-in, sync, spending rules, OS integration, browser link |
+| `desktop/ui/` | The app's windows (HTML, CSS, TypeScript) |
+| `extension/` | The browser extension (Manifest V3, TypeScript) |
+| `mockups/` | The design mockups the UI is built from |
+| `DATA.md` | Every request the desktop app makes |
 
 ## License
 
-[AGPL-3.0](LICENSE). Fonts: Figtree and Quicksand, SIL Open Font License (`OFL-*.txt` next to
-them).
+[AGPL-3.0](LICENSE). Fonts: Figtree and Quicksand, SIL Open Font License (see the `OFL-*.txt`
+files next to them).
